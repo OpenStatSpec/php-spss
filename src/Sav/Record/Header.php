@@ -4,8 +4,8 @@ namespace SPSS\Sav\Record;
 
 use SPSS\Buffer;
 use SPSS\Exception;
-use SPSS\Sav\Record;
 use SPSS\Sav\Exception\EncryptedFileException;
+use SPSS\Sav\Record;
 
 class Header extends Record
 {
