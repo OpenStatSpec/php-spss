@@ -15,6 +15,7 @@ use SPSS\Sav\Record\Info\LongStringValueLabels;
 use SPSS\Sav\Record\Info\MultipleResponseSets;
 use SPSS\Sav\Record\Info\VariableAttributes;
 use SPSS\Sav\Record\Info\VariableSets;
+use SPSS\Sav\Record\ValueLabel as ValueLabelRecord;
 use SPSS\Sav\VariableRole;
 use SPSS\Sav\VariableType;
 
@@ -67,6 +68,15 @@ class DatasetAssemblerTest extends TestCase
         $stringShortName = $reader->variables[1]->name;
         $reader->variables[0]->missingValuesFormat = -3;
         $reader->variables[0]->missingValues = [-99.0, -1.0, 999.0];
+        $reader->valueLabels = [
+            new ValueLabelRecord([
+                'labels' => [
+                    ['value' => 1.0, 'label' => 'Selected'],
+                ],
+                'indexes' => [0, 5],
+                'stringValues' => false,
+            ]),
+        ];
         $this->assertNotNull($reader->header);
         $reader->header->weightIndex = 1;
 
@@ -138,10 +148,15 @@ class DatasetAssemblerTest extends TestCase
         $dataset = $reader->toDataset(false);
         $numeric = $dataset->variable('aaa');
         $string = $dataset->variable('bbbb_bbbbbb12');
+        $secondNumeric = $dataset->variable('BBBB_BBBBBB13');
 
         $this->assertNotNull($numeric);
         $this->assertNotNull($string);
+        $this->assertNotNull($secondNumeric);
         $this->assertSame(VariableRole::PARTITION, $numeric->role);
+        $this->assertSame($numeric->valueLabels, $secondNumeric->valueLabels);
+        $this->assertSame(['aaa', 'BBBB_BBBBBB13'], $numeric->valueLabels->variableNames());
+        $this->assertSame('Selected', $numeric->valueLabels->labels()[0]->label);
         $this->assertSame(MissingValuesKind::RANGE_AND_VALUE, $numeric->missingValues->kind);
         $this->assertSame(-99.0, $numeric->missingValues->lower);
         $this->assertSame(999.0, $numeric->missingValues->additionalValue);

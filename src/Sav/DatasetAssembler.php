@@ -176,7 +176,7 @@ final class DatasetAssembler
     }
 
     /**
-     * @return array<string, array{width: int, values: array<array-key, string>}>
+     * @return array<string, array{width: int, labels: list<array{value: string, label: string}>}>
      */
     private function longValueLabels(?Info $info): array
     {
@@ -191,30 +191,48 @@ final class DatasetAssembler
             }
 
             $width = $data['width'] ?? null;
-            $values = $data['values'] ?? null;
-            if (!\is_int($width) || !\is_array($values)) {
+            if (!\is_int($width)) {
                 continue;
             }
 
-            $typedValues = [];
-            foreach ($values as $value => $label) {
-                if (\is_string($label)) {
-                    $typedValues[$value] = $label;
+            $labels = [];
+            $rawLabels = $data['labels'] ?? null;
+            if (\is_array($rawLabels)) {
+                foreach ($rawLabels as $rawLabel) {
+                    if (
+                        \is_array($rawLabel)
+                        && isset($rawLabel['value'], $rawLabel['label'])
+                        && (\is_string($rawLabel['value']) || \is_int($rawLabel['value']))
+                        && \is_string($rawLabel['label'])
+                    ) {
+                        $labels[] = ['value' => (string) $rawLabel['value'], 'label' => $rawLabel['label']];
+                    }
+                }
+            } else {
+                $values = $data['values'] ?? null;
+                if (!\is_array($values)) {
+                    continue;
+                }
+
+                foreach ($values as $value => $label) {
+                    if (\is_string($label)) {
+                        $labels[] = ['value' => (string) $value, 'label' => $label];
+                    }
                 }
             }
 
-            $result[$name] = ['width' => $width, 'values' => $typedValues];
+            $result[$name] = ['width' => $width, 'labels' => $labels];
         }
 
         return $result;
     }
 
-    /** @param array{width: int, values: array<array-key, string>} $data */
+    /** @param array{width: int, labels: list<array{value: string, label: string}>} $data */
     private function typedLongValueLabels(string $variableName, array $data): ValueLabelSet
     {
         $labels = [];
-        foreach ($data['values'] as $value => $label) {
-            $labels[] = new ValueLabel((string) $value, $label);
+        foreach ($data['labels'] as $label) {
+            $labels[] = new ValueLabel($label['value'], $label['label']);
         }
 
         return new ValueLabelSet($labels, [$variableName]);
