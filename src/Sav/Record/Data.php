@@ -26,6 +26,8 @@ class Data extends Record
     /** Compressed sysmiss value. Expand to an 8-byte segment of SYSMISS value. */
     public const OPCODE_SYSMISS = 255;
 
+    private const ZLIB_BLOCK_SIZE = 0x3ff000;
+
     /**
      * @var array<int, array<int, mixed>> [case_index][var_index]
      */
@@ -55,6 +57,11 @@ class Data extends Record
      * @var Buffer|null Temporary buffer
      */
     protected $dataBuffer;
+
+    /**
+     * @var Buffer|null Decompressed bytecode buffer for ZSAV iteration
+     */
+    protected $zlibBuffer;
 
     public function readCase(Buffer $buffer, int $case): void
     {
@@ -103,9 +110,14 @@ class Data extends Record
             $sysmis = NAN;
         }
 
+        $caseBuffer = $buffer;
+        if (2 === $buffer->context->header->compression) {
+            $caseBuffer = $this->zlibBuffer ??= $this->readZlibData($buffer, $bias);
+        }
+
         if (($case >= 0) && ($case < $casesCount)) {
             $this->row = $this->readCaseData(
-                $buffer,
+                $caseBuffer,
                 $compressed,
                 $bias,
                 $variables,
@@ -159,11 +171,15 @@ class Data extends Record
             $sysmis = NAN;
         }
 
+        $dataBuffer = 2 === $compressed
+            ? $this->readZlibData($buffer, $bias)
+            : $buffer;
+
         $this->opcodeIndex = 8;
 
         for ($case = 0; $case < $casesCount; $case++) {
             $this->matrix[$case] = $this->readCaseData(
-                $buffer,
+                $dataBuffer,
                 $compressed,
                 $bias,
                 $variables,
@@ -191,6 +207,10 @@ class Data extends Record
         $compressed = $buffer->context->header->compression;
         $bias       = $buffer->context->header->bias;
         // $casesCount = $buffer->context->header->casesCount;
+
+        if (2 === $compressed) {
+            throw new \LogicException('Incremental ZSAV writing is not supported.');
+        }
 
         /** @var Variable[] $variables */
         $variables = $buffer->context->variables;
@@ -265,6 +285,14 @@ class Data extends Record
         $buffer->writeInt(self::TYPE);
         $this->startData = $buffer->position();
         $buffer->writeInt(0);
+
+        $outputBuffer = $buffer;
+        if (2 === $compressed) {
+            $outputBuffer = Buffer::factory('', ['memory' => true]);
+            $outputBuffer->charset = $buffer->charset;
+            $outputBuffer->isBigEndian = $buffer->isBigEndian;
+        }
+
         if ($compressed) {
             $this->dataBuffer = Buffer::factory('', ['memory' => true]);
         }
@@ -273,7 +301,7 @@ class Data extends Record
             for ($case = 0; $case < $casesCount; $case++) {
                 $row = $this->matrix[$case];
                 $this->writeCaseData(
-                    $buffer,
+                    $outputBuffer,
                     $row,
                     $compressed,
                     $bias,
@@ -285,7 +313,11 @@ class Data extends Record
         }
 
         if ($compressed) {
-            $this->writeOpcode($buffer, self::OPCODE_EOF);
+            $this->writeOpcode($outputBuffer, self::OPCODE_EOF);
+        }
+
+        if (2 === $compressed) {
+            $this->writeZlibData($buffer, $outputBuffer, $bias);
         }
     }
 
@@ -317,6 +349,218 @@ class Data extends Record
 
         return false;
     }
+
+    private function readZlibData(Buffer $buffer, float $bias): Buffer
+    {
+        if (!\function_exists('gzuncompress')) {
+            throw new Exception('Reading ZSAV files requires the zlib extension.');
+        }
+
+        $actualHeaderOffset = $buffer->position();
+        $headerOffset = $buffer->readInt64();
+        $trailerOffset = $buffer->readInt64();
+        $trailerLength = $buffer->readInt64();
+        if (false === $headerOffset || false === $trailerOffset || false === $trailerLength) {
+            throw new Exception('Invalid ZSAV data: truncated ZLIB header.');
+        }
+
+        $fileSize = self::streamSize($buffer);
+        if ($headerOffset !== $actualHeaderOffset) {
+            throw new Exception('Invalid ZSAV data: incorrect ZLIB header offset.');
+        }
+
+        if ($trailerOffset < $headerOffset + 24
+            || $trailerLength < 48
+            || 0 !== ($trailerLength - 24) % 24
+            || $trailerOffset + $trailerLength !== $fileSize
+        ) {
+            throw new Exception('Invalid ZSAV data: incorrect ZLIB trailer offsets or length.');
+        }
+
+        if (0 !== $buffer->seek($trailerOffset)) {
+            throw new Exception('Invalid ZSAV data: unable to seek to the ZLIB trailer.');
+        }
+
+        $integerBias = $buffer->readInt64();
+        $zero = $buffer->readInt64();
+        $blockSize = $buffer->readInt();
+        $blockCount = $buffer->readInt();
+        if (false === $integerBias || false === $zero || false === $blockSize || false === $blockCount) {
+            throw new Exception('Invalid ZSAV data: truncated ZLIB trailer.');
+        }
+
+        $expectedBlockCount = intdiv($trailerLength - 24, 24);
+        if ($integerBias !== -(int) $bias
+            || 0 !== $zero
+            || self::ZLIB_BLOCK_SIZE !== $blockSize
+            || $blockCount < 1
+            || $blockCount !== $expectedBlockCount
+        ) {
+            throw new Exception('Invalid ZSAV data: inconsistent ZLIB trailer.');
+        }
+
+        /** @var list<array{uncompressedOffset: int, compressedOffset: int, uncompressedSize: int, compressedSize: int}> $descriptors */
+        $descriptors = [];
+        $expectedUncompressedOffset = $headerOffset;
+        $expectedCompressedOffset = $headerOffset + 24;
+
+        for ($index = 0; $index < $blockCount; $index++) {
+            $uncompressedOffset = $buffer->readInt64();
+            $compressedOffset = $buffer->readInt64();
+            $uncompressedSize = $buffer->readInt();
+            $compressedSize = $buffer->readInt();
+            if (false === $uncompressedOffset
+                || false === $compressedOffset
+                || false === $uncompressedSize
+                || false === $compressedSize
+            ) {
+                throw new Exception('Invalid ZSAV data: truncated ZLIB block descriptor.');
+            }
+
+            $isLastBlock = $index === $blockCount - 1;
+            if ($uncompressedOffset !== $expectedUncompressedOffset
+                || $compressedOffset !== $expectedCompressedOffset
+                || $uncompressedSize < 1
+                || $uncompressedSize > $blockSize
+                || (!$isLastBlock && $uncompressedSize !== $blockSize)
+                || $compressedSize < 1
+                || $compressedOffset + $compressedSize > $trailerOffset
+            ) {
+                throw new Exception('Invalid ZSAV data: inconsistent ZLIB block descriptor.');
+            }
+
+            $descriptors[] = [
+                'uncompressedOffset' => $uncompressedOffset,
+                'compressedOffset' => $compressedOffset,
+                'uncompressedSize' => $uncompressedSize,
+                'compressedSize' => $compressedSize,
+            ];
+            $expectedUncompressedOffset += $uncompressedSize;
+            $expectedCompressedOffset += $compressedSize;
+        }
+
+        if ($expectedCompressedOffset !== $trailerOffset) {
+            throw new Exception('Invalid ZSAV data: compressed blocks do not end at the trailer.');
+        }
+
+        $bytecode = '';
+        foreach ($descriptors as $descriptor) {
+            if (0 !== $buffer->seek($descriptor['compressedOffset'])) {
+                throw new Exception('Invalid ZSAV data: unable to seek to a compressed block.');
+            }
+
+            $compressedData = $buffer->read($descriptor['compressedSize']);
+            if (false === $compressedData || \strlen($compressedData) !== $descriptor['compressedSize']) {
+                throw new Exception('Invalid ZSAV data: truncated compressed block.');
+            }
+
+            $uncompressedData = @gzuncompress($compressedData, $descriptor['uncompressedSize']);
+            if (false === $uncompressedData) {
+                throw new Exception('Invalid ZSAV data: corrupt compressed block or checksum.');
+            }
+
+            if (\strlen($uncompressedData) !== $descriptor['uncompressedSize']) {
+                throw new Exception('Invalid ZSAV data: decompressed block size mismatch.');
+            }
+
+            $bytecode .= $uncompressedData;
+        }
+
+        $buffer->seek($fileSize);
+        $bytecodeBuffer = Buffer::factory($bytecode, ['memory' => true]);
+        $bytecodeBuffer->charset = $buffer->charset;
+        $bytecodeBuffer->isBigEndian = $buffer->isBigEndian;
+        $bytecodeBuffer->context = $buffer->context;
+
+        return $bytecodeBuffer;
+    }
+
+    private function writeZlibData(Buffer $buffer, Buffer $bytecodeBuffer, float $bias): void
+    {
+        if (!\function_exists('gzcompress')) {
+            throw new Exception('Writing ZSAV files requires the zlib extension.');
+        }
+
+        $integerBias = (int) $bias;
+        if ((float) $integerBias !== $bias) {
+            throw new Exception('ZSAV compression requires an integer compression bias.');
+        }
+
+        $stream = $bytecodeBuffer->getStream();
+        $streamInfo = fstat($stream);
+        if (false === $streamInfo) {
+            throw new Exception('Unable to determine ZSAV bytecode stream size.');
+        }
+
+        $bytecodeSize = $streamInfo['size'];
+        $bytecode = stream_get_contents($stream, $bytecodeSize, 0);
+        if (false === $bytecode || \strlen($bytecode) !== $bytecodeSize) {
+            throw new Exception('Unable to read ZSAV bytecode stream.');
+        }
+
+        $chunks = str_split($bytecode, self::ZLIB_BLOCK_SIZE);
+        if ([] === $chunks) {
+            $chunks = [''];
+        }
+
+        /** @var list<array{compressed: string, uncompressedSize: int, compressedSize: int}> $blocks */
+        $blocks = [];
+        foreach ($chunks as $chunk) {
+            $compressed = gzcompress($chunk);
+            if (false === $compressed) {
+                throw new Exception('Unable to compress a ZSAV data block.');
+            }
+
+            $blocks[] = [
+                'compressed' => $compressed,
+                'uncompressedSize' => \strlen($chunk),
+                'compressedSize' => \strlen($compressed),
+            ];
+        }
+
+        $headerOffset = $buffer->position();
+        $trailerOffset = $headerOffset + 24;
+        foreach ($blocks as $block) {
+            $trailerOffset += $block['compressedSize'];
+        }
+
+        $trailerLength = 24 + 24 * \count($blocks);
+        $buffer->writeInt64($headerOffset);
+        $buffer->writeInt64($trailerOffset);
+        $buffer->writeInt64($trailerLength);
+
+        foreach ($blocks as $block) {
+            $buffer->write($block['compressed']);
+        }
+
+        $buffer->writeInt64(-$integerBias);
+        $buffer->writeInt64(0);
+        $buffer->writeInt(self::ZLIB_BLOCK_SIZE);
+        $buffer->writeInt(\count($blocks));
+
+        $uncompressedOffset = $headerOffset;
+        $compressedOffset = $headerOffset + 24;
+        foreach ($blocks as $block) {
+            $buffer->writeInt64($uncompressedOffset);
+            $buffer->writeInt64($compressedOffset);
+            $buffer->writeInt($block['uncompressedSize']);
+            $buffer->writeInt($block['compressedSize']);
+
+            $uncompressedOffset += $block['uncompressedSize'];
+            $compressedOffset += $block['compressedSize'];
+        }
+    }
+
+    private static function streamSize(Buffer $buffer): int
+    {
+        $streamInfo = fstat($buffer->getStream());
+        if (false === $streamInfo) {
+            throw new Exception('Unable to determine SPSS stream size.');
+        }
+
+        return $streamInfo['size'];
+    }
+
 
     protected function readOpcode(Buffer $buffer): int
     {

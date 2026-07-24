@@ -288,6 +288,23 @@ class Buffer
         return $this->writeNumeric($data, 'i', 4);
     }
 
+    public function readInt64(): int|false
+    {
+        $value = $this->readNumeric(8, 'q');
+
+        return false === $value ? false : (int) $value;
+    }
+
+    public function writeInt64(int $data): int|false
+    {
+        $bytes = pack('q', $data);
+        if ($this->isBigEndian) {
+            $bytes = strrev($bytes);
+        }
+
+        return $this->write($bytes, 8);
+    }
+
     public function readShort(): int|false
     {
         $value = $this->readNumeric(2, 'v');
