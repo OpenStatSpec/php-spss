@@ -53,6 +53,7 @@ class InfoAttributeRecordsTest extends TestCase
         $record = new DataFileAttributes(['data' => $expected]);
         $buffer = Buffer::factory('', ['memory' => true]);
         $buffer->charset = 'ISO-8859-1';
+
         $record->write($buffer);
         $buffer->rewind();
         self::assertSame(7, $buffer->readInt());

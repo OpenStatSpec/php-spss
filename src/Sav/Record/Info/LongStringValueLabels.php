@@ -44,6 +44,7 @@ class LongStringValueLabels extends Info
             $this->data[$varName] = [
                 'width'  => $varWidth,
                 'values' => [],
+                'labels' => [],
             ];
             for ($i = 0; $i < $valuesCount; $i++) {
                 $valueLength = $buffer->readInt();
@@ -68,6 +69,10 @@ class LongStringValueLabels extends Info
 
                 $value = rtrim($value, ' ');
                 $this->data[$varName]['values'][$value] = $label;
+                $this->data[$varName]['labels'][] = [
+                    'value' => $value,
+                    'label' => $label,
+                ];
             }
         }
     }
@@ -83,12 +88,22 @@ class LongStringValueLabels extends Info
                 throw new \InvalidArgumentException('width required');
             }
 
-            if (!isset($data['values'])) {
-                throw new \InvalidArgumentException('values required');
-            }
+            $labels = $data['labels'] ?? null;
+            if (null === $labels) {
+                if (!isset($data['values'])) {
+                    throw new \InvalidArgumentException('values or labels required');
+                }
+                if (!\is_array($data['values'])) {
+                    throw new \InvalidArgumentException('values must be an array');
+                }
 
-            if (!\is_array($data['values'])) {
-                throw new \InvalidArgumentException('values must be an array');
+                $labels = [];
+                foreach ($data['values'] as $value => $label) {
+                    $labels[] = ['value' => (string) $value, 'label' => (string) $label];
+                }
+            }
+            if (!\is_array($labels)) {
+                throw new \InvalidArgumentException('labels must be an array');
             }
 
             $width = (int) $data['width'];
@@ -101,14 +116,21 @@ class LongStringValueLabels extends Info
             $localBuffer->writeInt($varNameLength);
             $localBuffer->writeString($varName, $varNameLength);
             $localBuffer->writeInt($width);
-            $localBuffer->writeInt(\count($data['values']));
-            foreach ($data['values'] as $value => $label) {
-                $value = (string) $value;
+            $localBuffer->writeInt(\count($labels));
+            foreach ($labels as $entry) {
+                if (!\is_array($entry) || !array_key_exists('value', $entry) || !array_key_exists('label', $entry)) {
+                    throw new \InvalidArgumentException('Each long string value label requires value and label keys.');
+                }
+
+                $value = $entry['value'];
+                $label = $entry['label'];
+                if (!\is_string($value) || !\is_string($label)) {
+                    throw new \InvalidArgumentException('Long string value label values and labels must be strings.');
+                }
                 if ($this->encodedLength($buffer, $value) > $width) {
                     throw new \InvalidArgumentException('value exceeds the variable width');
                 }
 
-                $label = (string) $label;
                 $labelLength = $this->encodedLength($buffer, $label);
                 if ($labelLength > 120) {
                     throw new \InvalidArgumentException('label must not exceed 120 bytes');

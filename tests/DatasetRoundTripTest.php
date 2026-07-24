@@ -106,6 +106,7 @@ class DatasetRoundTripTest extends TestCase
         $writer = new Writer($source);
         $buffer = $writer->getBuffer();
         $buffer->rewind();
+
         $actual = Reader::fromString($buffer->getStream())->readDataset();
 
         $this->assertSame('Typed round-trip', $actual->metadata->label);

@@ -83,12 +83,18 @@ class SavBinaryLayerTest extends TestCase
                 'põld_long' => [
                     'width' => 9,
                     'values' => ['õ' => 'Tähe'],
+                    'labels' => [
+                        [
+                            'value' => 'õ',
+                            'label' => 'Tähe',
+                        ],
+                    ],
                 ],
             ],
             $valueLabels,
         );
         $this->assertSame(
-            [$reader->variables[0]->name => ['ÕNN']],
+            ['põld_long' => ['ÕNN']],
             $missingValues,
         );
         $this->assertSame([['õ']], $reader->data);

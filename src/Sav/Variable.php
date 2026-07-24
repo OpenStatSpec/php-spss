@@ -7,17 +7,22 @@ namespace SPSS\Sav;
 /**
  * @phpstan-type VariableData array{
  *     name?: string|null,
+ *     type?: VariableType|null,
  *     width?: int,
  *     decimals?: int,
  *     format?: int,
+ *     printFormat?: VariableFormat|null,
+ *     writeFormat?: VariableFormat|null,
  *     columns?: int|null,
  *     alignment?: int|null,
  *     measure?: int|null,
  *     role?: int|null,
  *     label?: string|null,
  *     values?: array<array-key, string>,
+ *     valueLabelSet?: ValueLabelSet|null,
  *     missing?: list<int|float|string>,
- *     attributes?: array<string, int|float|string|array<string, int|float|string>>,
+ *     missingValues?: MissingValues|null,
+ *     attributes?: array<string, int|float|string|array<array-key, int|float|string>>,
  *     data?: array<int, int|float|string|null>
  * }
  */
@@ -125,6 +130,12 @@ class Variable
     /** @var string|null */
     public $name;
 
+    public ?VariableType $type = null;
+
+    public ?VariableFormat $printFormat = null;
+
+    public ?VariableFormat $writeFormat = null;
+
     /** @var int */
     public $width    = 8;
 
@@ -152,11 +163,15 @@ class Variable
     /** @var array<array-key, string> */
     public $values  = [];
 
+    public ?ValueLabelSet $valueLabelSet = null;
+
     /** @var list<int|float|string> */
     public $missing = [];
 
+    public ?MissingValues $missingValues = null;
+
     /**
-     * @var array<string, int|float|string|array<string, int|float|string>>
+     * @var array<string, int|float|string|array<array-key, int|float|string>>
      */
     public $attributes = [
         // '$@Role' => self::ROLE_BOTH
@@ -179,6 +194,9 @@ class Variable
                 case 'name':
                     $this->name = $value;
                     break;
+                case 'type':
+                    $this->type = $value;
+                    break;
                 case 'width':
                     $this->width = $value;
                     break;
@@ -187,6 +205,12 @@ class Variable
                     break;
                 case 'format':
                     $this->format = $value;
+                    break;
+                case 'printFormat':
+                    $this->printFormat = $value;
+                    break;
+                case 'writeFormat':
+                    $this->writeFormat = $value;
                     break;
                 case 'columns':
                     $this->columns = $value;
@@ -206,8 +230,14 @@ class Variable
                 case 'values':
                     $this->values = $value;
                     break;
+                case 'valueLabelSet':
+                    $this->valueLabelSet = $value;
+                    break;
                 case 'missing':
                     $this->missing = $value;
+                    break;
+                case 'missingValues':
+                    $this->missingValues = $value;
                     break;
                 case 'attributes':
                     $this->attributes = $value;
@@ -226,13 +256,12 @@ class Variable
      */
     public static function isNumberFormat($format): bool
     {
-        return \in_array($format, [
-            self::FORMAT_TYPE_COMMA,
-            self::FORMAT_TYPE_F,
-            self::FORMAT_TYPE_DATETIME,
-            self::FORMAT_TYPE_DATE,
-            self::FORMAT_TYPE_TIME,
-        ], true);
+        return 0 !== $format && !\in_array($format, [self::FORMAT_TYPE_A, self::FORMAT_TYPE_AHEX], true);
+    }
+
+    public static function isStringFormat(int $format): bool
+    {
+        return \in_array($format, [self::FORMAT_TYPE_A, self::FORMAT_TYPE_AHEX], true);
     }
 
     /**

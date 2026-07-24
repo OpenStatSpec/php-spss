@@ -26,7 +26,7 @@ class Data extends Record
     /** Compressed sysmiss value. Expand to an 8-byte segment of SYSMISS value. */
     public const OPCODE_SYSMISS = 255;
 
-    private const ZLIB_BLOCK_SIZE = 0x3ff000;
+    private const int ZLIB_BLOCK_SIZE = 0x3ff000;
 
     /**
      * @var array<int, array<int, mixed>> [case_index][var_index]
@@ -360,11 +360,11 @@ class Data extends Record
         $headerOffset = $buffer->readInt64();
         $trailerOffset = $buffer->readInt64();
         $trailerLength = $buffer->readInt64();
-        if (false === $headerOffset || false === $trailerOffset || false === $trailerLength) {
+        if (in_array(false, [$headerOffset, $trailerOffset, $trailerLength], true)) {
             throw new Exception('Invalid ZSAV data: truncated ZLIB header.');
         }
 
-        $fileSize = self::streamSize($buffer);
+        $fileSize = $this->streamSize($buffer);
         if ($headerOffset !== $actualHeaderOffset) {
             throw new Exception('Invalid ZSAV data: incorrect ZLIB header offset.');
         }
@@ -385,7 +385,7 @@ class Data extends Record
         $zero = $buffer->readInt64();
         $blockSize = $buffer->readInt();
         $blockCount = $buffer->readInt();
-        if (false === $integerBias || false === $zero || false === $blockSize || false === $blockCount) {
+        if (in_array(false, [$integerBias, $zero, $blockSize, $blockCount], true)) {
             throw new Exception('Invalid ZSAV data: truncated ZLIB trailer.');
         }
 
@@ -409,10 +409,7 @@ class Data extends Record
             $compressedOffset = $buffer->readInt64();
             $uncompressedSize = $buffer->readInt();
             $compressedSize = $buffer->readInt();
-            if (false === $uncompressedOffset
-                || false === $compressedOffset
-                || false === $uncompressedSize
-                || false === $compressedSize
+            if (in_array(false, [$uncompressedOffset, $compressedOffset, $uncompressedSize, $compressedSize], true)
             ) {
                 throw new Exception('Invalid ZSAV data: truncated ZLIB block descriptor.');
             }
@@ -551,7 +548,7 @@ class Data extends Record
         }
     }
 
-    private static function streamSize(Buffer $buffer): int
+    private function streamSize(Buffer $buffer): int
     {
         $streamInfo = fstat($buffer->getStream());
         if (false === $streamInfo) {
@@ -708,8 +705,8 @@ class Data extends Record
 
             if ($isNumeric) {
                 if (!$compressed) {
-                    $buffer->writeDouble((float) $value);
-                } elseif ($value === $sysmis || '' === $value) {
+                    $buffer->writeDouble(null === $value ? $sysmis : (float) $value);
+                } elseif (null === $value || $value === $sysmis || '' === $value) {
                     $this->writeOpcode($buffer, self::OPCODE_SYSMISS);
                 } elseif ($value >= 1 - $bias && $value <= 251 - $bias && $value === (int) $value) {
                     $this->writeOpcode($buffer, (int) ($value + $bias));

@@ -186,10 +186,12 @@ final class DatasetAssembler
 
         $result = [];
         foreach ($info->toArray() as $name => $data) {
-            if (!\is_string($name) || !\is_array($data)) {
+            if (!\is_string($name)) {
                 continue;
             }
-
+            if (!\is_array($data)) {
+                continue;
+            }
             $width = $data['width'] ?? null;
             if (!\is_int($width)) {
                 continue;
@@ -247,10 +249,15 @@ final class DatasetAssembler
 
         $result = [];
         foreach ($info->toArray() as $name => $values) {
-            if (!\is_string($name) || !\is_array($values) || !array_is_list($values)) {
+            if (!\is_string($name)) {
                 continue;
             }
-
+            if (!\is_array($values)) {
+                continue;
+            }
+            if (!array_is_list($values)) {
+                continue;
+            }
             $typedValues = [];
             foreach ($values as $value) {
                 if (\is_string($value)) {
@@ -317,14 +324,21 @@ final class DatasetAssembler
 
         $result = [];
         foreach ($info->toArray() as $display) {
-            if (!\is_array($display) || !isset($display[0], $display[1], $display[2])) {
+            if (!\is_array($display)) {
                 continue;
             }
-
-            if (!\is_int($display[0]) || !\is_int($display[1]) || !\is_int($display[2])) {
+            if (!isset($display[0], $display[1], $display[2])) {
                 continue;
             }
-
+            if (!\is_int($display[0])) {
+                continue;
+            }
+            if (!\is_int($display[1])) {
+                continue;
+            }
+            if (!\is_int($display[2])) {
+                continue;
+            }
             $result[] = [$display[0], $display[1], $display[2]];
         }
 
@@ -340,10 +354,12 @@ final class DatasetAssembler
 
         $result = [];
         foreach ($info->toArray() as $variableName => $attributes) {
-            if (!\is_string($variableName) || !\is_array($attributes)) {
+            if (!\is_string($variableName)) {
                 continue;
             }
-
+            if (!\is_array($attributes)) {
+                continue;
+            }
             foreach ($attributes as $attributeName => $values) {
                 if (!\is_string($attributeName)) {
                     continue;
@@ -409,10 +425,12 @@ final class DatasetAssembler
 
         $result = [];
         foreach ($info->toArray() as $name => $values) {
-            if (!\is_string($name) || 'raw' === $name) {
+            if (!\is_string($name)) {
                 continue;
             }
-
+            if ('raw' === $name) {
+                continue;
+            }
             $normalized = $this->attributeValues($values);
             if ([] !== $normalized) {
                 $result[] = new FileAttribute($name, $normalized);
@@ -452,10 +470,12 @@ final class DatasetAssembler
 
         $result = [];
         foreach ($info->toArray() as $name => $variableNames) {
-            if (!\is_string($name) || !\is_array($variableNames)) {
+            if (!\is_string($name)) {
                 continue;
             }
-
+            if (!\is_array($variableNames)) {
+                continue;
+            }
             $members = [];
             foreach ($variableNames as $variableName) {
                 if (!\is_string($variableName)) {
@@ -463,7 +483,7 @@ final class DatasetAssembler
                 }
 
                 $resolved = $dictionary->variable($variableName);
-                $members[] = null !== $resolved ? $resolved->name : $variableName;
+                $members[] = $resolved instanceof \SPSS\Sav\VariableMetadata ? $resolved->name : $variableName;
             }
 
             $result[] = new VariableSet($name, $members);
@@ -483,13 +503,18 @@ final class DatasetAssembler
             }
 
             foreach ($info->toArray() as $name => $set) {
-                if (!\is_string($name) || !\is_array($set)) {
+                if (!\is_string($name)) {
                     continue;
                 }
-
+                if (!\is_array($set)) {
+                    continue;
+                }
                 $typeCode = $set['type'] ?? null;
                 $rawVariables = $set['variables'] ?? null;
-                if (!\is_string($typeCode) || !\is_array($rawVariables)) {
+                if (!\is_string($typeCode)) {
+                    continue;
+                }
+                if (!\is_array($rawVariables)) {
                     continue;
                 }
 
@@ -497,7 +522,7 @@ final class DatasetAssembler
                 foreach ($rawVariables as $variableName) {
                     if (\is_string($variableName)) {
                         $resolved = $dictionary->variable($variableName);
-                        $variableNames[] = null !== $resolved ? $resolved->name : $variableName;
+                        $variableNames[] = $resolved instanceof \SPSS\Sav\VariableMetadata ? $resolved->name : $variableName;
                     }
                 }
 
@@ -539,14 +564,7 @@ final class DatasetAssembler
         if ([] === $variableNames) {
             return false;
         }
-
-        foreach ($variableNames as $variableName) {
-            if (VariableType::NUMERIC !== $dictionary->variable($variableName)?->type) {
-                return false;
-            }
-        }
-
-        return true;
+        return array_all($variableNames, fn(string $variableName): bool => VariableType::NUMERIC === $dictionary->variable($variableName)?->type);
     }
 
     /** @return array<string, string> */
