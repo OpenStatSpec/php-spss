@@ -13,8 +13,9 @@ final readonly class VariableDictionary implements \Countable
     public function __construct(array $variables = [])
     {
 
+        /** @var array<string, int> $names */
         $names = [];
-        foreach ($variables as $variable) {
+        foreach ($variables as $index => $variable) {
 
             foreach ([$variable->name, $variable->shortName] as $name) {
                 if (null === $name) {
@@ -22,11 +23,11 @@ final readonly class VariableDictionary implements \Countable
                 }
 
                 $normalized = mb_strtolower($name);
-                if (isset($names[$normalized])) {
+                if (isset($names[$normalized]) && $names[$normalized] !== $index) {
                     throw new \InvalidArgumentException(sprintf('Duplicate dictionary variable name "%s".', $name));
                 }
 
-                $names[$normalized] = true;
+                $names[$normalized] = $index;
             }
         }
 

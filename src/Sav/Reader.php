@@ -38,8 +38,14 @@ class Reader
      */
     public $info = [];
 
+    /** @var list<Info> Physical extension records in file order. */
+    public array $infoRecords = [];
+
+    /** @var array<int, Info> Semantically merged extension records. */
+    public array $mergedInfo = [];
+
     /**
-     * @var array<int, array<int, float|string>>
+     * @var list<list<int|float|string|null>>
      */
     public $data = [];
 
@@ -58,11 +64,15 @@ class Reader
      */
     public $record;
 
+    private bool $dataRead = false;
+
     /**
      * Reader constructor.
      */
-    private function __construct(protected Buffer $_buffer)
-    {
+    private function __construct(
+        protected Buffer $_buffer,
+        private readonly ?string $source = null,
+    ) {
         $this->_buffer->context = $this;
     }
 
@@ -87,6 +97,8 @@ class Reader
                     break;
                 case Record\Info::TYPE:
                     $this->info = $infoCollection->fill($this->_buffer);
+                    $this->infoRecords = $infoCollection->records;
+                    $this->mergedInfo = $infoCollection->mergedData;
                     break;
                 case Record\Document::TYPE:
                     $this->documents = Record\Document::fill($this->_buffer)->toArray();
@@ -100,7 +112,7 @@ class Reader
      */
     public static function fromFile($file): self
     {
-        return new self(Buffer::factory(fopen($file, 'rb')));
+        return new self(Buffer::factory(fopen($file, 'rb')), $file);
     }
 
     /**
@@ -119,6 +131,36 @@ class Reader
     public function read(): static
     {
         return $this->readHeader()->readBody()->readData();
+    }
+
+    public function readDataset(): Dataset
+    {
+        if (null === $this->header) {
+            $this->read();
+        } else {
+            if (-1 === $this->dataPosition) {
+                $this->readBody();
+            }
+
+            if (!$this->dataRead) {
+                $this->readData();
+            }
+        }
+
+        return $this->toDataset();
+    }
+
+    public function toDataset(bool $includeData = true): Dataset
+    {
+        if (-1 === $this->dataPosition) {
+            throw new \LogicException('Reader metadata must be loaded before converting it to a dataset.');
+        }
+
+        if ($includeData && !$this->dataRead) {
+            throw new \LogicException('Reader data must be loaded before including rows in a dataset.');
+        }
+
+        return (new DatasetAssembler())->assemble($this, $includeData);
     }
 
     public function readHeader(): static
@@ -151,6 +193,8 @@ class Reader
             if ($this->_buffer->seek($headerPosition) === 0) {
                 $this->valueLabels = [];
                 $this->info        = [];
+                $this->infoRecords = [];
+                $this->mergedInfo  = [];
                 $this->documents   = [];
                 $this->variables   = [];
                 $this->physicalVariables = [];
@@ -190,8 +234,14 @@ class Reader
     public function readData(): static
     {
         $this->data = Record\Data::fill($this->_buffer)->toArray();
+        $this->dataRead = true;
 
         return $this;
+    }
+
+    public function source(): ?string
+    {
+        return $this->source;
     }
 
     public function rewindCaseIterator(): bool
