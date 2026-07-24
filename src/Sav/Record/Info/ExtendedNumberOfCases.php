@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SPSS\Sav\Record\Info;
 
 use SPSS\Buffer;
@@ -7,7 +9,7 @@ use SPSS\Sav\Record\Info;
 
 class ExtendedNumberOfCases extends Info
 {
-    const SUBTYPE = 16;
+    public const SUBTYPE = 16;
 
     /**
      * @var float
@@ -24,14 +26,16 @@ class ExtendedNumberOfCases extends Info
      */
     protected $dataCount = 2;
 
-    public function read(Buffer $buffer)
+    #[\Override]
+    public function read(Buffer $buffer): void
     {
         parent::read($buffer);
         $buffer->readDouble();
         $this->ncases = $buffer->readDouble();
     }
 
-    public function write(Buffer $buffer)
+    #[\Override]
+    public function write(Buffer $buffer): void
     {
         parent::write($buffer);
         $buffer->writeDouble(1);

@@ -15,38 +15,36 @@ use SPSS\Utils;
  */
 class ValueLabel extends Record
 {
-    const TYPE             = 3;
-    const LABEL_MAX_LENGTH = 255;
+    public const TYPE             = 3;
+
+    public const LABEL_MAX_LENGTH = 255;
 
     /**
-     * @var array
+     * @var list<array{value: float|string, label: string}>
      */
     public $labels = [];
 
     /**
-     * @var array
+     * @var list<int>
      *            A list of dictionary indexes of variables to which to apply the value labels
      *            String variables wider than 8 bytes may not be specified in this list
      */
     public $indexes = [];
 
     /**
-     * @var Variable[]
+     * @var list<Variable>
      */
     protected $variables = [];
 
     /**
-     * @param array $variables
+     * @param list<Variable> $variables
      */
-    public function setVariables($variables)
+    public function setVariables(array $variables): void
     {
         $this->variables = $variables;
     }
 
-    /**
-     * @param  Buffer  $buffer
-     */
-    public function read(Buffer $buffer)
+    public function read(Buffer $buffer): void
     {
         /** @var int $labelCount Number of value labels present in this record. */
         $labelCount = $buffer->readInt();
@@ -88,7 +86,7 @@ class ValueLabel extends Record
         }
     }
 
-    public function write(Buffer $buffer)
+    public function write(Buffer $buffer): void
     {
         $var = (count($this->variables) > 0) ? $this->variables[count($this->variables) - 1] : null;
         $convertToDouble = (isset($var) && ($var->width > 0));

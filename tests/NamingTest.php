@@ -1,24 +1,29 @@
 <?php
 
+namespace SPSS\Tests;
+
+use PHPUnit\Framework\Attributes\DataProvider;
 use SPSS\Sav\Reader;
 use SPSS\Sav\Record\Info\LongVariableNames;
 use SPSS\Sav\Writer;
-use SPSS\Tests\TestCase;
 
 class NamingTest extends TestCase
 {
-    public function illegalNameProvider()
+    /**
+     * @return list<array{string}>
+     */
+    public static function illegalNameProvider(): array
     {
         return [
-            ['#FOO', ''],
-            ['$FOO', ''],
-            ['.FOO', ''],
-            ['FOO.', ''],
-            ['FOO_', ''],
+            ['#FOO'],
+            ['$FOO'],
+            ['.FOO'],
+            ['FOO.'],
+            ['FOO_'],
         ];
     }
 
-    public function testReservedNames()
+    public function testReservedNames(): void
     {
         $data = [
             'header'    => [
@@ -46,14 +51,12 @@ class NamingTest extends TestCase
 
         $reader = Reader::fromString($buffer->getStream())->read();
 
-        $this->assertRegExp('/^' . $data['variables'][0]['name'] . '[\w]{13}$/', $reader->info[LongVariableNames::SUBTYPE]['V00001']);
-        $this->assertRegExp('/^' . $data['variables'][1]['name'] . '[\w]{13}$/', $reader->info[LongVariableNames::SUBTYPE]['V00002']);
+        $this->assertMatchesRegularExpression('/^' . $data['variables'][0]['name'] . '[\w]{13}$/', $reader->info[LongVariableNames::SUBTYPE]['V00001']);
+        $this->assertMatchesRegularExpression('/^' . $data['variables'][1]['name'] . '[\w]{13}$/', $reader->info[LongVariableNames::SUBTYPE]['V00002']);
     }
 
-    /**
-     * @dataProvider illegalNameProvider
-     */
-    public function testIllegalNames($name)
+    #[DataProvider('illegalNameProvider')]
+    public function testIllegalNames(string $name): void
     {
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage(sprintf('Variable name `%s` contains an illegal character.', $name));

@@ -1,0 +1,19 @@
+#!/bin/sh
+
+set -eu
+
+repository_root=$(git rev-parse --show-toplevel)
+cd "$repository_root"
+
+if ! command -v composer >/dev/null 2>&1; then
+    echo "Composer is required to run the pre-push QA checks." >&2
+    exit 1
+fi
+if [ ! -x vendor/bin/phpunit ]; then
+    echo "Development dependencies are missing; run composer install first." >&2
+    exit 1
+fi
+
+
+echo "Running pre-push QA checks..."
+exec composer qa

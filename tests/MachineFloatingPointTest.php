@@ -1,13 +1,19 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SPSS\Tests;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use SPSS\Buffer;
 use SPSS\Sav\Record\Info\MachineFloatingPoint;
 
 class MachineFloatingPointTest extends TestCase
 {
-    public function provider()
+    /**
+     * @return list<array{0: array{sysmis?: int|float, highest?: int|float, lowest?: int|float}, 1: array{sysmis: int|float, highest: int|float, lowest: int|float}}>
+     */
+    public static function provider(): array
     {
         return [
             [
@@ -36,26 +42,28 @@ class MachineFloatingPointTest extends TestCase
     }
 
     /**
-     * @dataProvider provider
-     * @param  array  $attributes
-     * @param  array  $expected
+     * @param array{sysmis?: int|float, highest?: int|float, lowest?: int|float} $attributes
+     * @param array{sysmis: int|float, highest: int|float, lowest: int|float} $expected
      */
-    public function testWriteRead(array $attributes, array $expected)
+    #[DataProvider('provider')]
+    public function testWriteRead(array $attributes, array $expected): void
     {
-        $subject = new MachineFloatingPoint();
-        foreach ($attributes as $key => $value) {
-            $subject->{$key} = $value;
-        }
+        $subject = new MachineFloatingPoint($attributes);
+
         $buffer = Buffer::factory('', ['memory' => true]);
         $this->assertEquals(0, $buffer->position());
         $subject->write($buffer);
         $buffer->rewind();
         $buffer->skip(8);
+
         $read = MachineFloatingPoint::fill($buffer);
         $this->assertEquals(40, $buffer->position());
-        foreach ($expected as $key => $value) {
-            $msg      = "Wrong value received for '$key', expected '$value', got '{$read->{$key}}'";
-            $this->assertEquals($value, $read->{$key}, $msg);
-        }
+        $actual = [
+            'sysmis' => $read->sysmis,
+            'highest' => $read->highest,
+            'lowest' => $read->lowest,
+        ];
+
+        $this->assertEquals($expected, $actual);
     }
 }

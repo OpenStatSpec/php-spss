@@ -6,7 +6,9 @@
 .idea
 .env
 coverage.xml
-.phpunit.result.cache
+.phpunit.cache/
+.phpstan-cache/
 .php_cs.cache
+.php-cs-fixer.cache
 *.swp
 *.swo

@@ -2,15 +2,24 @@
 
 namespace SPSS\Tests;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use SPSS\Sav\Reader;
 use SPSS\Sav\Record;
 use SPSS\Sav\Writer;
 use SPSS\Utils;
 
+/**
+ * @phpstan-type RandomDataset array{header: array<string, bool|float|int|string|null>, variables: list<array{name: string, label: string, columns: int, alignment: int, measure: int, width: int, format: int, decimals: int, data: list<string>}>, documents: list<string>}
+ */
 class SavRandomReadWriteTest extends TestCase
 {
-    public function provider()
+    /**
+     * @return \Generator<int, array{0: RandomDataset}>
+     */
+    public static function provider(): iterable
     {
+        mt_srand(20260724);
+
         $header = [
             'recType'         => Record\Header::NORMAL_REC_TYPE,
             'prodName'        => '@(#) SPSS DATA FILE',
@@ -20,14 +29,14 @@ class SavRandomReadWriteTest extends TestCase
             'compression'     => 1,
             'weightIndex'     => 0,
             'bias'            => 100,
-            'creationDate'    => date('d M y'),
-            'creationTime'    => date('H:i:s'),
+            'creationDate'    => '24 Jul 26',
+            'creationTime'    => '12:00:00',
             'fileLabel'       => 'test read/write',
         ];
 
         $documents = [
-            $this->generateRandomString(mt_rand(5, Record\Document::LENGTH)),
-            $this->generateRandomString(mt_rand(5, Record\Document::LENGTH)),
+            self::generateRandomString(mt_rand(5, Record\Document::LENGTH)),
+            self::generateRandomString(mt_rand(5, Record\Document::LENGTH)),
         ];
 
         $variables = [];
@@ -36,21 +45,22 @@ class SavRandomReadWriteTest extends TestCase
 
         $count = 1; // mt_rand(1, 20);
         for ($i = 0; $i < $count; $i++) {
-            $var = $this->generateVariable([
-                    'id'         => $this->generateRandomString(mt_rand(2, 100)) . 'a',
+            $var = self::generateVariable(
+                [
+                    'id'         => self::generateRandomString(mt_rand(2, 100)) . 'a',
                     'casesCount' => $header['casesCount'],
-                ]
+                ],
             );
             $header['nominalCaseSize'] += Utils::widthToOcts($var['width']);
             $variables[] = $var;
         }
 
-        yield [compact('header', 'variables', 'documents')];
+        yield [['header' => $header, 'variables' => $variables, 'documents' => $documents]];
 
         $header['casesCount'] = 5;
         for ($i = 0; $i < 100; $i++) {
-            $variable = $this->generateVariable([
-                'id'         => $this->generateRandomString(mt_rand(2, 100)) . 'a',
+            $variable = self::generateVariable([
+                'id'         => self::generateRandomString(mt_rand(2, 100)) . 'a',
                 'casesCount' => $header['casesCount'],
             ]);
             $header['nominalCaseSize'] = Utils::widthToOcts($variable['width']);
@@ -65,11 +75,10 @@ class SavRandomReadWriteTest extends TestCase
     }
 
     /**
-     * @dataProvider provider
-     *
-     * @param array $data
+     * @param RandomDataset $data
      */
-    public function testWriteRead($data)
+    #[DataProvider('provider')]
+    public function testWriteRead(array $data): void
     {
         $writer = new Writer($data);
 
@@ -80,7 +89,7 @@ class SavRandomReadWriteTest extends TestCase
 
         $this->checkHeader($data['header'], $reader);
 
-        if ($data['documents']) {
+        if ([] !== $data['documents']) {
             foreach ($data['documents'] as $key => $doc) {
                 $this->assertEquals($doc, $reader->documents[$key], 'Invalid document line.');
             }

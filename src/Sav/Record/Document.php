@@ -5,17 +5,19 @@ namespace SPSS\Sav\Record;
 use SPSS\Buffer;
 use SPSS\Sav\Record;
 
+/** @implements \ArrayAccess<array-key, mixed> */
 class Document extends Record implements \ArrayAccess
 {
-    const TYPE   = 6;
-    const LENGTH = 80;
+    public const TYPE   = 6;
+
+    public const LENGTH = 80;
 
     /**
-     * @var array
+     * @var array<array-key, mixed>
      */
     protected $lines = [];
 
-    public function read(Buffer $buffer)
+    public function read(Buffer $buffer): void
     {
         $count = $buffer->readInt();
         for ($i = 0; $i < $count; $i++) {
@@ -23,7 +25,7 @@ class Document extends Record implements \ArrayAccess
         }
     }
 
-    public function write(Buffer $buffer)
+    public function write(Buffer $buffer): void
     {
         $buffer->writeInt(self::TYPE);
         $buffer->writeInt(\count($this->lines));
@@ -33,60 +35,44 @@ class Document extends Record implements \ArrayAccess
     }
 
     /**
-     * @return array
+     * @return array<array-key, mixed>
      */
-    public function toArray()
+    #[\Override]
+    public function toArray(): array
     {
         return $this->lines;
     }
 
     /**
-     * @param array $lines
+     * @param array<array-key, mixed> $lines
      */
-    public function append($lines)
+    public function append(array $lines): void
     {
         foreach ($lines as $line) {
             $this->lines[] = $line;
         }
     }
 
-    /**
-     * @param mixed $offset
-     *
-     * @return bool
-     */
-    #[\ReturnTypeWillChange]
-    public function offsetExists($offset)
+    public function offsetExists(mixed $offset): bool
     {
         return isset($this->lines[$offset]);
     }
 
-    /**
-     * @param mixed $offset
-     *
-     * @return mixed
-     */
-    #[\ReturnTypeWillChange]
-    public function offsetGet($offset)
+    public function offsetGet(mixed $offset): mixed
     {
         return $this->lines[$offset];
     }
 
-    /**
-     * @param mixed $offset
-     * @param mixed $value
-     */
-    #[\ReturnTypeWillChange]
-    public function offsetSet($offset, $value)
+    public function offsetSet(mixed $offset, mixed $value): void
     {
-        $this->lines[$offset] = $value;
+        if (null === $offset) {
+            $this->lines[] = $value;
+        } else {
+            $this->lines[$offset] = $value;
+        }
     }
 
-    /**
-     * @param mixed $offset
-     */
-    #[\ReturnTypeWillChange]
-    public function offsetUnset($offset)
+    public function offsetUnset(mixed $offset): void
     {
         unset($this->lines[$offset]);
     }

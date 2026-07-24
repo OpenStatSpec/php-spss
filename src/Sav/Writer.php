@@ -6,6 +6,21 @@ use SPSS\Buffer;
 use SPSS\Exception;
 use SPSS\Utils;
 
+/**
+ * @phpstan-import-type VariableData from Variable
+ *
+ * @phpstan-type WriterData array{
+ *     header: array<string, mixed>,
+ *     variables: list<Variable|VariableData>,
+ *     info?: array{
+ *         characterEncoding?: string,
+ *         machineInteger?: array<string, mixed>,
+ *         machineFloatingPoint?: array<string, mixed>,
+ *         extendedNumberOfCases?: array<string, mixed>
+ *     },
+ *     documents?: list<string>
+ * }
+ */
 class Writer
 {
     /**
@@ -46,37 +61,33 @@ class Writer
     /**
      * Writer constructor.
      *
-     * @param array $data
-     * @param Buffer $buffer
+     * @param WriterData|array{} $data
+     * @param Buffer|null        $buffer
      *
      */
     public function __construct($data = [], $buffer = null)
     {
-        $this->buffer          = isset($buffer) ? $buffer : Buffer::factory();
+        $this->buffer          = $buffer ?? Buffer::factory();
         $this->buffer->context = $this;
 
-        if (!empty($data)) {
+        if ($data !== []) {
             $this->write($data);
         }
     }
 
     /**
      * @param string $file
-     * @param array $data
-     *
-     * @return Writer
+     * @param WriterData|array{} $data
      */
-    public static function createInFile($file, $data = [])
+    public static function createInFile($file, $data = []): self
     {
         return new self($data, Buffer::factory(fopen($file, 'wb+')));
     }
 
     /**
-     * @param array $data
-     *
-     * @return void
+     * @param WriterData $data
      */
-    public function write($data)
+    public function write(array $data): void
     {
         $this->header                  = new Record\Header($data['header']);
         $this->header->nominalCaseSize = 0;
@@ -84,12 +95,12 @@ class Writer
 
         $this->info[Record\Info\MachineInteger::SUBTYPE] = $this->prepareInfoRecord(
             Record\Info\MachineInteger::class,
-            $data
+            $data,
         );
 
         $this->info[Record\Info\MachineFloatingPoint::SUBTYPE] = $this->prepareInfoRecord(
             Record\Info\MachineFloatingPoint::class,
-            $data
+            $data,
         );
 
         $this->info[Record\Info\VariableDisplayParam::SUBTYPE]  = new Record\Info\VariableDisplayParam();
@@ -97,7 +108,7 @@ class Writer
         $this->info[Record\Info\VeryLongString::SUBTYPE]        = new Record\Info\VeryLongString();
         $this->info[Record\Info\ExtendedNumberOfCases::SUBTYPE] = $this->prepareInfoRecord(
             Record\Info\ExtendedNumberOfCases::class,
-            $data
+            $data,
         );
         $this->info[Record\Info\VariableAttributes::SUBTYPE]      = new Record\Info\VariableAttributes();
         $this->info[Record\Info\LongStringValueLabels::SUBTYPE]   = new Record\Info\LongStringValueLabels();
@@ -109,7 +120,7 @@ class Writer
 
         // FIXME: This means we can not set any other encode here?
         // https://www.gnu.org/software/pspp/pspp-dev/html_node/Machine-Integer-Info-Record.html#character_002dcode
-        $charactersCode = array(
+        $charactersCode = [
             "utf-8" => 65001,
             "iso 8859-1" => 28591,
             "windows-1252" => 1252,
@@ -117,42 +128,41 @@ class Writer
             "dec kanji" => 4,
             "8-bit ascii" => 3,
             "7-bit ascii" => 2,
-            "ebcdic" => 1
-        );
+            "ebcdic" => 1,
+        ];
 
-        $chCode = isset($charactersCode[strtolower($encode)]) ? $charactersCode[strtolower($encode)] : 65001;
+        $chCode = $charactersCode[strtolower($encode)] ?? 65001;
         $this->info[Record\Info\MachineInteger::SUBTYPE]->characterCode = $chCode;
         $this->data = new Record\Data();
         $nominalIdx = 0;
-        $shortVarsPrefix = array();
+        $shortVarsPrefix = [];
 
-        /** @var Variable $var */
         // for ($idx = 0; $idx <= $variablesCount; $idx++) {
-        foreach (array_values($data['variables']) as $idx => $var) {
+        foreach ($data['variables'] as $idx => $var) {
             if (\is_array($var)) {
                 $var = new Variable($var);
             }
 
             // UTF-8 and '.' characters could pass here
-            if (!preg_match('/^(?!#|\$|\.)[\w0-9_.#@$\x{4e00}-\x{9fa5}]+(?<!\.|_)$/u', $var->name)) {
+            if (!preg_match('/^(?!#|\$|\.)[\w0-9_.#@$\x{4e00}-\x{9fa5}]+(?<!\.|_)$/u', (string) $var->name)) {
                 throw new \InvalidArgumentException(sprintf('Variable name `%s` contains an illegal character.', $var->name));
             }
 
-            if (in_array($var->name, ['ALL', 'AND', 'BY', 'EQ', 'GE', 'GT', 'LE', 'LT', 'NE', 'NOT', 'OR', 'TO', 'WITH'])) {
+            if (in_array($var->name, ['ALL', 'AND', 'BY', 'EQ', 'GE', 'GT', 'LE', 'LT', 'NE', 'NOT', 'OR', 'TO', 'WITH'], true)) {
                 $var->name = \uniqid($var->name);
             }
 
-            if (empty($var->width)) {
-                throw new \InvalidArgumentException(sprintf('Invalid field width. Should be an integer number greater than zero.'));
+            if ($var->width === 0) {
+                throw new \InvalidArgumentException('Invalid field width. Should be an integer number greater than zero.');
             }
 
             $variable = new Record\Variable();
 
             // TODO: refactory - keep 7 positions so we can add after that for 100 very long string segments
-            $prefix = mb_strtoupper(mb_substr($var->name, 0, min(mb_strlen($var->name), 5)));
-            $variable->name  = ((Record\Variable::isVeryLong($var->width) !== false) && (!in_array($prefix, $shortVarsPrefix))) ?
-                               $prefix : 'V' . str_pad($idx + 1, 5, 0, STR_PAD_LEFT);
-            array_push($shortVarsPrefix, $prefix);
+            $prefix = mb_strtoupper(mb_substr((string) $var->name, 0, min(mb_strlen((string) $var->name), 5)));
+            $variable->name  = ((Record\Variable::isVeryLong($var->width)) && (!in_array($prefix, $shortVarsPrefix, true))) ?
+                               $prefix : 'V' . str_pad((string) ($idx + 1), 5, '0', STR_PAD_LEFT);
+            $shortVarsPrefix[] = $prefix;
             $variable->width = Variable::FORMAT_TYPE_A === $var->format ? $var->width : 0;
 
             $variable->label = $var->label;
@@ -186,6 +196,7 @@ class Writer
                     } else {
                         $variable->missingValuesFormat = 1;
                     }
+
                     $variable->missingValues = $var->missing;
                 } else {
                     $this->info[Record\Info\LongStringMissingValues::SUBTYPE][$shortName] = $var->missing;
@@ -210,6 +221,7 @@ class Writer
                             'label' => $value,
                         ];
                     }
+
                     $valueLabel->indexes = [$nominalIdx + 1];
                     $this->valueLabels[] = $valueLabel;
                 }
@@ -217,7 +229,7 @@ class Writer
 
             $this->info[Record\Info\LongVariableNames::SUBTYPE][$shortName] = $var->name;
 
-            if (Record\Variable::isVeryLong($var->width) !== false) {
+            if (Record\Variable::isVeryLong($var->width)) {
                 $this->info[Record\Info\VeryLongString::SUBTYPE][$shortName] = $var->width;
             }
 
@@ -265,10 +277,11 @@ class Writer
         }
 
         // write documents
-        if (!empty($data['documents'])) {
-            $this->document = new Record\Document([
+        if (isset($data['documents']) && $data['documents'] !== []) {
+            $this->document = new Record\Document(
+                [
                     'lines' => $data['documents'],
-                ]
+                ],
             );
             $this->document->write($this->buffer);
         }
@@ -281,13 +294,11 @@ class Writer
     }
 
     /**
-     * @param $row
-     *
-     * @return void
+     * @param array<int, int|float|string|null> $row
      */
-    public function writeCase($row)
+    public function writeCase(array $row): void
     {
-        if (!isset($this->data)) {
+        if ($this->data === null) {
             $this->data = new Record\Data();
         }
 
@@ -298,22 +309,14 @@ class Writer
         $this->data->writeCase($this->buffer, $row);
     }
 
-    /**
-     * @param $file
-     *
-     * @return false|int
-     */
-    public function save($file)
+    public function save(string $file): int|false
     {
         return $this->buffer->saveToFile($file);
     }
 
-    /**
-     * @return bool
-     */
-    public function close()
+    public function close(): bool
     {
-        if (isset($this->data)) {
+        if ($this->data !== null) {
             $this->data->close();
         }
 
@@ -337,25 +340,27 @@ class Writer
     }
 
     /**
-     * @param string $className
-     * @param array  $data
-     * @param string $group
+     * @template T of Record\Info
+     *
+     * @param class-string<T> $className
+     * @param WriterData      $data
      *
      * @throws Exception
      *
-     * @return array
+     * @return T
      */
-    private function prepareInfoRecord($className, $data, $group = 'info')
+    private function prepareInfoRecord(string $className, array $data): Record\Info
     {
         if (!class_exists($className)) {
             throw new Exception('Unknown class');
         }
+
         $key = lcfirst(substr($className, strrpos($className, '\\') + 1));
 
+        $info = $data['info'] ?? [];
+
         return new $className(
-            isset($data[$group]) && isset($data[$group][$key]) ?
-                $data[$group][$key] :
-                []
+            $info[$key] ?? [],
         );
     }
 }

@@ -1,17 +1,21 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SPSS\Sav\Record;
 
 use SPSS\Buffer;
 use SPSS\Sav\Record;
 
+/** @implements \ArrayAccess<array-key, mixed> */
 class Info extends Record implements \ArrayAccess
 {
-    const TYPE    = 7;
-    const SUBTYPE = 0;
+    public const TYPE    = 7;
+
+    public const SUBTYPE = 0;
 
     /**
-     * @var array
+     * @var array<array-key, mixed>
      */
     protected $data = [];
 
@@ -25,13 +29,13 @@ class Info extends Record implements \ArrayAccess
      */
     protected $dataCount = 0;
 
-    public function read(Buffer $buffer)
+    public function read(Buffer $buffer): void
     {
         $this->dataSize  = $buffer->readInt();
         $this->dataCount = $buffer->readInt();
     }
 
-    public function write(Buffer $buffer)
+    public function write(Buffer $buffer): void
     {
         $buffer->writeInt(self::TYPE);
         $buffer->writeInt(static::SUBTYPE);
@@ -40,41 +44,25 @@ class Info extends Record implements \ArrayAccess
     }
 
     /**
-     * @return array
+     * @return array<array-key, mixed>
      */
-    public function toArray()
+    #[\Override]
+    public function toArray(): array
     {
         return $this->data;
     }
 
-    /**
-     * @param mixed $offset
-     *
-     * @return bool
-     */
-    #[\ReturnTypeWillChange]
-    public function offsetExists($offset)
+    public function offsetExists(mixed $offset): bool
     {
         return isset($this->data[$offset]);
     }
 
-    /**
-     * @param mixed $offset
-     *
-     * @return mixed
-     */
-    #[\ReturnTypeWillChange]
-    public function offsetGet($offset)
+    public function offsetGet(mixed $offset): mixed
     {
         return $this->data[$offset];
     }
 
-    /**
-     * @param mixed $offset
-     * @param mixed $value
-     */
-    #[\ReturnTypeWillChange]
-    public function offsetSet($offset, $value)
+    public function offsetSet(mixed $offset, mixed $value): void
     {
         if (null === $offset) {
             $this->data[] = $value;
@@ -83,11 +71,7 @@ class Info extends Record implements \ArrayAccess
         }
     }
 
-    /**
-     * @param mixed $offset
-     */
-    #[\ReturnTypeWillChange]
-    public function offsetUnset($offset)
+    public function offsetUnset(mixed $offset): void
     {
         unset($this->data[$offset]);
     }

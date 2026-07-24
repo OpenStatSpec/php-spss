@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SPSS\Sav;
 
 use SPSS\Buffer;
@@ -9,7 +11,7 @@ interface RecordInterface
     /**
      * @var int Record type code
      */
-    const TYPE = 0;
+    public const TYPE = 0;
 
     /**
      * @return void

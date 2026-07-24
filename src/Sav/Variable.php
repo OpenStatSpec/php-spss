@@ -1,106 +1,230 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SPSS\Sav;
 
+/**
+ * @phpstan-type VariableData array{
+ *     name?: string|null,
+ *     width?: int,
+ *     decimals?: int,
+ *     format?: int,
+ *     columns?: int|null,
+ *     alignment?: int|null,
+ *     measure?: int|null,
+ *     role?: int|null,
+ *     label?: string|null,
+ *     values?: array<array-key, string>,
+ *     missing?: list<int|float|string>,
+ *     attributes?: array<string, int|float|string|array<string, int|float|string>>,
+ *     data?: array<int, int|float|string|null>
+ * }
+ */
 class Variable
 {
     // const TYPE_NUMERIC = 1;
     // const TYPE_STRING = 2;
 
-    const FORMAT_TYPE_A        = 1;
-    const FORMAT_TYPE_AHEX     = 2;
-    const FORMAT_TYPE_COMMA    = 3;
-    const FORMAT_TYPE_DOLLAR   = 4;
-    const FORMAT_TYPE_F        = 5;
-    const FORMAT_TYPE_IB       = 6;
-    const FORMAT_TYPE_PIBHEX   = 7;
-    const FORMAT_TYPE_P        = 8;
-    const FORMAT_TYPE_PIB      = 9;
-    const FORMAT_TYPE_PK       = 10;
-    const FORMAT_TYPE_RB       = 11;
-    const FORMAT_TYPE_RBHEX    = 12;
-    const FORMAT_TYPE_Z        = 15;
-    const FORMAT_TYPE_N        = 16;
-    const FORMAT_TYPE_E        = 17;
-    const FORMAT_TYPE_DATE     = 20;
-    const FORMAT_TYPE_TIME     = 21;
-    const FORMAT_TYPE_DATETIME = 22;
-    const FORMAT_TYPE_ADATE    = 23;
-    const FORMAT_TYPE_JDATE    = 24;
-    const FORMAT_TYPE_DTIME    = 25;
-    const FORMAT_TYPE_WKDAY    = 26;
-    const FORMAT_TYPE_MONTH    = 27;
-    const FORMAT_TYPE_MOYR     = 28;
-    const FORMAT_TYPE_QYR      = 29;
-    const FORMAT_TYPE_WKYR     = 30;
-    const FORMAT_TYPE_PCT      = 31;
-    const FORMAT_TYPE_DOT      = 32;
-    const FORMAT_TYPE_CCA      = 33;
-    const FORMAT_TYPE_CCB      = 34;
-    const FORMAT_TYPE_CCC      = 35;
-    const FORMAT_TYPE_CCD      = 36;
-    const FORMAT_TYPE_CCE      = 37;
-    const FORMAT_TYPE_EDATE    = 38;
-    const FORMAT_TYPE_SDATE    = 39;
+    public const FORMAT_TYPE_A        = 1;
 
-    const ALIGN_LEFT   = 0;
-    const ALIGN_RIGHT  = 1;
-    const ALIGN_CENTER = 2;
+    public const FORMAT_TYPE_AHEX     = 2;
 
-    const MEASURE_UNKNOWN = 0;
-    const MEASURE_NOMINAL = 1;
-    const MEASURE_ORDINAL = 2;
-    const MEASURE_SCALE   = 3;
+    public const FORMAT_TYPE_COMMA    = 3;
 
-    const ROLE_INPUT     = 0;
-    const ROLE_TARGET    = 1;
-    const ROLE_BOTH      = 2;
-    const ROLE_NONE      = 3;
-    const ROLE_PARTITION = 4;
-    const ROLE_SPLIT     = 5;
+    public const FORMAT_TYPE_DOLLAR   = 4;
 
+    public const FORMAT_TYPE_F        = 5;
+
+    public const FORMAT_TYPE_IB       = 6;
+
+    public const FORMAT_TYPE_PIBHEX   = 7;
+
+    public const FORMAT_TYPE_P        = 8;
+
+    public const FORMAT_TYPE_PIB      = 9;
+
+    public const FORMAT_TYPE_PK       = 10;
+
+    public const FORMAT_TYPE_RB       = 11;
+
+    public const FORMAT_TYPE_RBHEX    = 12;
+
+    public const FORMAT_TYPE_Z        = 15;
+
+    public const FORMAT_TYPE_N        = 16;
+
+    public const FORMAT_TYPE_E        = 17;
+
+    public const FORMAT_TYPE_DATE     = 20;
+
+    public const FORMAT_TYPE_TIME     = 21;
+
+    public const FORMAT_TYPE_DATETIME = 22;
+
+    public const FORMAT_TYPE_ADATE    = 23;
+
+    public const FORMAT_TYPE_JDATE    = 24;
+
+    public const FORMAT_TYPE_DTIME    = 25;
+
+    public const FORMAT_TYPE_WKDAY    = 26;
+
+    public const FORMAT_TYPE_MONTH    = 27;
+
+    public const FORMAT_TYPE_MOYR     = 28;
+
+    public const FORMAT_TYPE_QYR      = 29;
+
+    public const FORMAT_TYPE_WKYR     = 30;
+
+    public const FORMAT_TYPE_PCT      = 31;
+
+    public const FORMAT_TYPE_DOT      = 32;
+
+    public const FORMAT_TYPE_CCA      = 33;
+
+    public const FORMAT_TYPE_CCB      = 34;
+
+    public const FORMAT_TYPE_CCC      = 35;
+
+    public const FORMAT_TYPE_CCD      = 36;
+
+    public const FORMAT_TYPE_CCE      = 37;
+
+    public const FORMAT_TYPE_EDATE    = 38;
+
+    public const FORMAT_TYPE_SDATE    = 39;
+
+    public const ALIGN_LEFT   = 0;
+
+    public const ALIGN_RIGHT  = 1;
+
+    public const ALIGN_CENTER = 2;
+
+    public const MEASURE_UNKNOWN = 0;
+
+    public const MEASURE_NOMINAL = 1;
+
+    public const MEASURE_ORDINAL = 2;
+
+    public const MEASURE_SCALE   = 3;
+
+    public const ROLE_INPUT     = 0;
+
+    public const ROLE_TARGET    = 1;
+
+    public const ROLE_BOTH      = 2;
+
+    public const ROLE_NONE      = 3;
+
+    public const ROLE_PARTITION = 4;
+
+    public const ROLE_SPLIT     = 5;
+
+    /** @var string|null */
     public $name;
+
+    /** @var int */
     public $width    = 8;
+
+    /** @var int */
     public $decimals = 0;
+
+    /** @var int */
     public $format   = 0;
+
+    /** @var int|null */
     public $columns;
+
+    /** @var int|null */
     public $alignment;
+
+    /** @var int|null */
     public $measure;
+
+    /** @var int|null */
     public $role;
+
+    /** @var string|null */
     public $label;
+
+    /** @var array<array-key, string> */
     public $values  = [];
+
+    /** @var list<int|float|string> */
     public $missing = [];
 
     /**
-     * @var array
+     * @var array<string, int|float|string|array<string, int|float|string>>
      */
     public $attributes = [
         // '$@Role' => self::ROLE_BOTH
     ];
 
     /**
-     * @var array
+     * @var array<int, int|float|string|null>
      */
     public $data = [];
 
     /**
      * Variable constructor.
      *
-     * @param array $data
+     * @param VariableData $data
      */
     public function __construct($data = [])
     {
         foreach ($data as $key => $value) {
-            $this->{$key} = $value;
+            switch ($key) {
+                case 'name':
+                    $this->name = $value;
+                    break;
+                case 'width':
+                    $this->width = $value;
+                    break;
+                case 'decimals':
+                    $this->decimals = $value;
+                    break;
+                case 'format':
+                    $this->format = $value;
+                    break;
+                case 'columns':
+                    $this->columns = $value;
+                    break;
+                case 'alignment':
+                    $this->alignment = $value;
+                    break;
+                case 'measure':
+                    $this->measure = $value;
+                    break;
+                case 'role':
+                    $this->role = $value;
+                    break;
+                case 'label':
+                    $this->label = $value;
+                    break;
+                case 'values':
+                    $this->values = $value;
+                    break;
+                case 'missing':
+                    $this->missing = $value;
+                    break;
+                case 'attributes':
+                    $this->attributes = $value;
+                    break;
+                case 'data':
+                    $this->data = $value;
+                    break;
+                default:
+                    throw new \InvalidArgumentException(sprintf('Unknown %s property "%s".', self::class, $key));
+            }
         }
     }
 
     /**
      * @param int $format
-     *
-     * @return bool
      */
-    public static function isNumberFormat($format)
+    public static function isNumberFormat($format): bool
     {
         return \in_array($format, [
             self::FORMAT_TYPE_COMMA,
@@ -119,105 +243,62 @@ class Variable
      *
      * @param int $format
      *
-     * @return array
+     * @return array{string|null, string|null}
      */
-    public static function getFormatInfo($format)
+    public static function getFormatInfo($format): array
     {
-        switch ($format) {
-            case 0:
-                return ['', 'Continuation of string variable'];
-            case self::FORMAT_TYPE_A:
-                return ['A', 'Alphanumeric'];
-            case self::FORMAT_TYPE_AHEX:
-                return ['AHEX', 'alphanumeric hexadecimal'];
-            case self::FORMAT_TYPE_COMMA:
-                return ['COMMA', 'F format with commas'];
-            case self::FORMAT_TYPE_DOLLAR:
-                return ['DOLLAR', 'Commas and floating point dollar sign'];
-            case self::FORMAT_TYPE_F:
-                return ['F', 'F (default numeric) format'];
-            case self::FORMAT_TYPE_IB:
-                return ['IB', 'Integer binary'];
-            case self::FORMAT_TYPE_PIBHEX:
-                return ['PIBHEX', 'Positive binary integer - hexadecimal'];
-            case self::FORMAT_TYPE_P:
-                return ['P', 'Packed decimal'];
-            case self::FORMAT_TYPE_PIB:
-                return ['PIB', 'Positive integer binary (Unsigned)'];
-            case self::FORMAT_TYPE_PK:
-                return ['PK', 'Positive packed decimal (Unsigned)'];
-            case self::FORMAT_TYPE_RB:
-                return ['RB', 'Floating point binary'];
-            case self::FORMAT_TYPE_RBHEX:
-                return ['RBHEX', 'Floating point binary - hexadecimal'];
-            case self::FORMAT_TYPE_Z:
-                return ['Z', 'Zoned decimal'];
-            case self::FORMAT_TYPE_N:
-                return ['N', 'N format - unsigned with leading zeros'];
-            case self::FORMAT_TYPE_E:
-                return ['E', 'E format - with explicit power of ten'];
-            case self::FORMAT_TYPE_DATE:
-                return ['DATE', 'Date format dd-mmm-yyyy'];
-            case self::FORMAT_TYPE_TIME:
-                return ['TIME', 'Time format hh:mm:ss.s'];
-            case self::FORMAT_TYPE_DATETIME:
-                return ['DATETIME', 'Date and time'];
-            case self::FORMAT_TYPE_ADATE:
-                return ['ADATE', 'Date in mm/dd/yyyy form'];
-            case self::FORMAT_TYPE_JDATE:
-                return ['JDATE', 'Julian date - yyyyddd'];
-            case self::FORMAT_TYPE_DTIME:
-                return ['DTIME', 'Date-time dd hh:mm:ss.s'];
-            case self::FORMAT_TYPE_WKDAY:
-                return ['WKDAY', 'Day of the week'];
-            case self::FORMAT_TYPE_MONTH:
-                return ['MONTH', 'Month'];
-            case self::FORMAT_TYPE_MOYR:
-                return ['MOYR', 'mmm yyyy'];
-            case self::FORMAT_TYPE_QYR:
-                return ['QYR', 'q Q yyyy'];
-            case self::FORMAT_TYPE_WKYR:
-                return ['WKYR', 'ww WK yyyy'];
-            case self::FORMAT_TYPE_PCT:
-                return ['PCT', 'Percent - F followed by "%"'];
-            case self::FORMAT_TYPE_DOT:
-                return ['DOT', 'Like COMMA, switching dot for comma'];
-            case self::FORMAT_TYPE_CCA:
-                return ['CCA', 'User-programmable currency format (1)'];
-            case self::FORMAT_TYPE_CCB:
-                return ['CCB', 'User-programmable currency format (2)'];
-            case self::FORMAT_TYPE_CCC:
-                return ['CCC', 'User-programmable currency format (3)'];
-            case self::FORMAT_TYPE_CCD:
-                return ['CCD', 'User-programmable currency format (4)'];
-            case self::FORMAT_TYPE_CCE:
-                return ['CCE', 'User-programmable currency format (5)'];
-            case self::FORMAT_TYPE_EDATE:
-                return ['EDATE', 'Date in dd.mm.yyyy style'];
-            case self::FORMAT_TYPE_SDATE:
-                return ['SDATE', 'Date in yyyy/mm/dd style'];
-        }
-
-        return [null, null];
+        return match ($format) {
+            0 => ['', 'Continuation of string variable'],
+            self::FORMAT_TYPE_A => ['A', 'Alphanumeric'],
+            self::FORMAT_TYPE_AHEX => ['AHEX', 'alphanumeric hexadecimal'],
+            self::FORMAT_TYPE_COMMA => ['COMMA', 'F format with commas'],
+            self::FORMAT_TYPE_DOLLAR => ['DOLLAR', 'Commas and floating point dollar sign'],
+            self::FORMAT_TYPE_F => ['F', 'F (default numeric) format'],
+            self::FORMAT_TYPE_IB => ['IB', 'Integer binary'],
+            self::FORMAT_TYPE_PIBHEX => ['PIBHEX', 'Positive binary integer - hexadecimal'],
+            self::FORMAT_TYPE_P => ['P', 'Packed decimal'],
+            self::FORMAT_TYPE_PIB => ['PIB', 'Positive integer binary (Unsigned)'],
+            self::FORMAT_TYPE_PK => ['PK', 'Positive packed decimal (Unsigned)'],
+            self::FORMAT_TYPE_RB => ['RB', 'Floating point binary'],
+            self::FORMAT_TYPE_RBHEX => ['RBHEX', 'Floating point binary - hexadecimal'],
+            self::FORMAT_TYPE_Z => ['Z', 'Zoned decimal'],
+            self::FORMAT_TYPE_N => ['N', 'N format - unsigned with leading zeros'],
+            self::FORMAT_TYPE_E => ['E', 'E format - with explicit power of ten'],
+            self::FORMAT_TYPE_DATE => ['DATE', 'Date format dd-mmm-yyyy'],
+            self::FORMAT_TYPE_TIME => ['TIME', 'Time format hh:mm:ss.s'],
+            self::FORMAT_TYPE_DATETIME => ['DATETIME', 'Date and time'],
+            self::FORMAT_TYPE_ADATE => ['ADATE', 'Date in mm/dd/yyyy form'],
+            self::FORMAT_TYPE_JDATE => ['JDATE', 'Julian date - yyyyddd'],
+            self::FORMAT_TYPE_DTIME => ['DTIME', 'Date-time dd hh:mm:ss.s'],
+            self::FORMAT_TYPE_WKDAY => ['WKDAY', 'Day of the week'],
+            self::FORMAT_TYPE_MONTH => ['MONTH', 'Month'],
+            self::FORMAT_TYPE_MOYR => ['MOYR', 'mmm yyyy'],
+            self::FORMAT_TYPE_QYR => ['QYR', 'q Q yyyy'],
+            self::FORMAT_TYPE_WKYR => ['WKYR', 'ww WK yyyy'],
+            self::FORMAT_TYPE_PCT => ['PCT', 'Percent - F followed by "%"'],
+            self::FORMAT_TYPE_DOT => ['DOT', 'Like COMMA, switching dot for comma'],
+            self::FORMAT_TYPE_CCA => ['CCA', 'User-programmable currency format (1)'],
+            self::FORMAT_TYPE_CCB => ['CCB', 'User-programmable currency format (2)'],
+            self::FORMAT_TYPE_CCC => ['CCC', 'User-programmable currency format (3)'],
+            self::FORMAT_TYPE_CCD => ['CCD', 'User-programmable currency format (4)'],
+            self::FORMAT_TYPE_CCE => ['CCE', 'User-programmable currency format (5)'],
+            self::FORMAT_TYPE_EDATE => ['EDATE', 'Date in dd.mm.yyyy style'],
+            self::FORMAT_TYPE_SDATE => ['SDATE', 'Date in yyyy/mm/dd style'],
+            default => [null, null],
+        };
     }
 
     /**
      * @param int $alignment
-     *
-     * @return string
      */
-    public static function alignmentToString($alignment)
+    public static function alignmentToString($alignment): string
     {
-        switch ($alignment) {
-            case self::ALIGN_LEFT:
-                return 'Left';
-            case self::ALIGN_RIGHT:
-                return 'Right';
-            case self::ALIGN_CENTER:
-                return 'Center';
-        }
-
-        return 'Invalid';
+        return match ($alignment) {
+            self::ALIGN_LEFT => 'Left',
+            self::ALIGN_RIGHT => 'Right',
+            self::ALIGN_CENTER => 'Center',
+            default => 'Invalid',
+        };
     }
 
     /**

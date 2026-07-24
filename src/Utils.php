@@ -10,49 +10,34 @@ class Utils
      * SPSS represents a date as the number of seconds since the epoch, midnight, Oct. 14, 1582.
      *
      * @param $timestamp
-     * @param string $format
-     *
-     * @return false|string
      */
-    public static function formatDate($timestamp, $format = 'Y M d')
+    public static function formatDate(int $timestamp, string $format = 'Y M d'): string
     {
         return date($format, strtotime('1582-10-14 00:00:00') + $timestamp);
     }
 
     /**
      * Rounds X up to the next multiple of Y.
-     *
-     * @param int $x
-     * @param int $y
-     *
-     * @return int
      */
-    public static function roundUp($x, $y)
+    public static function roundUp(int $x, int $y): int
     {
-        return ceil($x / $y) * $y;
+        return (int) (ceil($x / $y) * $y);
     }
 
     /**
      * Rounds X down to the prev multiple of Y.
-     *
-     * @param int $x
-     * @param int $y
-     *
-     * @return int
      */
-    public static function roundDown($x, $y)
+    public static function roundDown(int $x, int $y): int
     {
-        return floor($x / $y) * $y;
+        return (int) (floor($x / $y) * $y);
     }
 
     /**
      * Convert bytes to string.
      *
-     * @param  array  $bytes
-     *
-     * @return string
+     * @param list<int> $bytes
      */
-    public static function bytesToString(array $bytes)
+    public static function bytesToString(array $bytes): string
     {
         $str = '';
         foreach ($bytes as $byte) {
@@ -65,36 +50,37 @@ class Utils
     /**
      * Convert double to string.
      *
-     * @param float $num
      *
-     * @return string
      */
-    public static function doubleToString($num)
+    public static function doubleToString(float $num): string
     {
-        return self::bytesToString(unpack('C8', pack('d', $num)));
+        $bytes = unpack('C8', pack('d', $num));
+        if (false === $bytes) {
+            throw new Exception('Unable to unpack a double value.');
+        }
+
+        return self::bytesToString(array_values($bytes));
     }
 
-    /**
-     * @param string $str
-     *
-     * @return float
-     */
-    public static function stringToDouble($str)
+    public static function stringToDouble(string $str): float
     {
         // if (strlen($str) < 8) {
         //     throw new Exception('String must be a 8 length');
         // }
 
-        return unpack('d', pack('A8', $str))[1];
+        $value = unpack('d', pack('A8', $str));
+        if (false === $value || !isset($value[1]) || !\is_float($value[1])) {
+            throw new Exception('Unable to unpack a string as a double value.');
+        }
+
+        return $value[1];
     }
 
     /**
-     * @param  array  $bytes
-     * @param  bool  $unsigned
-     *
-     * @return int
+     * @param list<int> $bytes
+     * @return ($unsigned is true ? int : int|numeric-string)
      */
-    public static function bytesToInt(array $bytes, $unsigned = true)
+    public static function bytesToInt(array $bytes, bool $unsigned = true): int|string
     {
         $bytes = array_reverse($bytes);
         $value = 0;
@@ -106,12 +92,9 @@ class Utils
     }
 
     /**
-     * @param int $int
-     * @param int $size
-     *
-     * @return array
+     * @return list<int>
      */
-    public static function intToBytes($int, $size = 32)
+    public static function intToBytes(int $int, int $size = 32): array
     {
         $size  = self::roundUp($size, 8);
         $bytes = [];
@@ -123,41 +106,31 @@ class Utils
     }
 
     /**
-     * @param int $value
-     * @param int $size
      *
-     * @return string
+     * @return int|numeric-string
      */
-    public static function unsignedToSigned($value, $size = 32)
+    public static function unsignedToSigned(int $value, int $size = 32): int|string
     {
         $size = self::roundUp($size, 8);
-        if (bccomp($value, bcpow(2, $size - 1)) >= 0) {
-            $value = bcsub($value, bcpow(2, $size));
+        if (bccomp((string) $value, bcpow('2', (string) ($size - 1))) >= 0) {
+            return bcsub((string) $value, bcpow('2', (string) $size));
         }
 
         return $value;
     }
 
-    /**
-     * @param int $value
-     * @param int $size
-     *
-     * @return string
-     */
-    public static function signedToUnsigned($value, $size = 32)
+    public static function signedToUnsigned(int $value, int $size = 32): int|float
     {
-        return $value + bcpow(2, $size);
+        return $value + bcpow('2', (string) $size);
     }
 
     /**
      * Returns the number of bytes of uncompressed case data used for writing a variable of the given WIDTH to a system file.
      * All required space is included, including trailing padding and internal padding.
      *
-     * @param int $width
      *
-     * @return int
      */
-    public static function widthToBytes($width)
+    public static function widthToBytes(int $width): int
     {
         // assert($width >= 0);
 
@@ -176,12 +149,8 @@ class Utils
 
     /**
      * Returns the number of 8-byte units (octs) used to write data for a variable of the given WIDTH.
-     *
-     * @param int $width
-     *
-     * @return int
      */
-    public static function widthToOcts($width)
+    public static function widthToOcts(int $width): int
     {
         $result = 0;
         foreach (self::getSegments($width) as $segmentWidth) {
@@ -196,26 +165,23 @@ class Utils
      * A segment is a physical variable in the system file that represents some piece of a logical variable.
      * Only very long string variables have more than one segment.
      *
-     * @param int $width
      *
-     * @return int
      */
-    public static function widthToSegments($width)
+    public static function widthToSegments(int $width): int
     {
-        return Variable::isVeryLong($width) !== false ? ceil($width / Variable::EFFECTIVE_VLS_CHUNK) : 1;
+        return Variable::isVeryLong($width) ? (int) ceil($width / Variable::EFFECTIVE_VLS_CHUNK) : 1;
     }
 
     /**
-     * @param $width
-     *
-     * @return \Generator
+     * @return \Generator<int, int, void, void>
      */
-    public static function getSegments($width)
+    public static function getSegments(int $width): \Generator
     {
         $count = self::widthToSegments($width);
         for ($i = 1; $i < $count; $i++) {
             yield 255;
         }
+
         yield $width - ($count - 1) * Variable::EFFECTIVE_VLS_CHUNK;
     }
 
@@ -223,12 +189,9 @@ class Utils
      * Returns the width to allocate to the given SEGMENT within a variable of the given WIDTH.
      * A segment is a physical variable in the system file that represents some piece of a logical variable.
      *
-     * @param int $width
-     * @param int $segment
      *
-     * @return int
      */
-    public static function segmentAllocWidth($width, $segment = 0)
+    public static function segmentAllocWidth(int $width, int $segment = 0): int
     {
         $segmentCount = self::widthToSegments($width);
         // assert($segment < $segmentCount);
@@ -244,14 +207,11 @@ class Utils
      * Returns the number of bytes to allocate to the given SEGMENT within a variable of the given width.
      * This is the same as.
      *
-     * @param mixed $width
-     * @param int   $segment
      *
-     * @return int
      *
      * @see segmentAllocWidth, except that a numeric value takes up 8 bytes despite having a width of 0.
      */
-    public static function segmentAllocBytes($width, $segment)
+    public static function segmentAllocBytes(int $width, int $segment): int
     {
         \assert($segment < self::widthToSegments($width));
 
@@ -261,13 +221,8 @@ class Utils
     /**
      * @param mixed $values
      */
-    public static function is_countable($values)
+    public static function is_countable($values): bool
     {
-        # is_countable (PHP 7 >= 7.3.0, PHP 8)
-        if (version_compare(PHP_VERSION, "7.3") < 0) {
-            return (is_array($values) || is_object($values) || is_iterable($values) || ($values instanceof \Countable));
-        } else {
-            return \is_countable($values);
-        }
+        return \is_countable($values);
     }
 }

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SPSS\Sav\Record\Info;
 
 use SPSS\Buffer;
@@ -15,7 +17,7 @@ if (!\defined('PHP_FLOAT_MAX')) {
  */
 class MachineFloatingPoint extends Info
 {
-    const SUBTYPE = 4;
+    public const SUBTYPE = 4;
 
     /**
      * @var float
@@ -42,7 +44,8 @@ class MachineFloatingPoint extends Info
      */
     protected $dataCount = 3;
 
-    public function read(Buffer $buffer)
+    #[\Override]
+    public function read(Buffer $buffer): void
     {
         parent::read($buffer);
         $this->sysmis  = $buffer->readDouble();
@@ -50,17 +53,18 @@ class MachineFloatingPoint extends Info
         $this->lowest  = $buffer->readDouble();
     }
 
-    public function write(Buffer $buffer)
+    #[\Override]
+    public function write(Buffer $buffer): void
     {
-        if (!isset($this->sysmis)) {
+        if ($this->sysmis === null) {
             $this->sysmis = -PHP_FLOAT_MAX;
         }
 
-        if (!isset($this->highest)) {
+        if ($this->highest === null) {
             $this->highest = PHP_FLOAT_MAX;
         }
 
-        if (!isset($this->lowest)) {
+        if ($this->lowest === null) {
             $this->lowest = -PHP_FLOAT_MAX;
         }
 

@@ -8,9 +8,10 @@ use SPSS\Utils;
 
 class LongStringMissingValues extends Info
 {
-    const SUBTYPE = 22;
+    public const SUBTYPE = 22;
 
-    public function read(Buffer $buffer)
+    #[\Override]
+    public function read(Buffer $buffer): void
     {
         parent::read($buffer);
         $buffer = $buffer->allocate($this->dataCount * $this->dataSize);
@@ -26,12 +27,13 @@ class LongStringMissingValues extends Info
         }
     }
 
-    public function write(Buffer $buffer)
+    #[\Override]
+    public function write(Buffer $buffer): void
     {
-        if ($this->data) {
+        if ([] !== $this->data) {
             $localBuffer = Buffer::factory();
             foreach ($this->data as $varName => $values) {
-                $localBuffer->writeInt(mb_strlen($varName));
+                $localBuffer->writeInt(mb_strlen((string) $varName));
                 $localBuffer->writeString($varName);
                 $localBuffer->write(\chr(Utils::is_countable($values) ? \count($values) : 0), 1);
                 $localBuffer->writeInt(8);
@@ -39,6 +41,7 @@ class LongStringMissingValues extends Info
                     $localBuffer->writeString($value, 8);
                 }
             }
+
             $this->dataCount = $localBuffer->position();
             parent::write($buffer);
             $localBuffer->rewind();

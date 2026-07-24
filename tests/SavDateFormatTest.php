@@ -2,17 +2,21 @@
 
 namespace SPSS\Tests;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use SPSS\Sav\Reader;
 use SPSS\Sav\Record;
 use SPSS\Sav\Variable;
 use SPSS\Sav\Writer;
 
+/**
+ * @phpstan-type DateDataset array{header: array<string, bool|float|int|string|null>, variables: list<array<string, mixed>>}
+ */
 class SavDateFormatTest extends TestCase
 {
     /**
-     * @return array
+     * @return list<array{0: DateDataset}>
      */
-    public function dataProvider()
+    public static function dataProvider(): array
     {
         $header = [
             'recType'         => Record\Header::NORMAL_REC_TYPE,
@@ -326,17 +330,16 @@ class SavDateFormatTest extends TestCase
 
         return [
             [
-                compact('header', 'variables'),
+                ['header' => $header, 'variables' => $variables],
             ],
         ];
     }
 
     /**
-     * @dataProvider dataProvider
-     *
-     * @param array $data
+     * @param DateDataset $data
      */
-    public function testWriteRead($data)
+    #[DataProvider('dataProvider')]
+    public function testWriteRead(array $data): void
     {
         $writer = new Writer($data);
 

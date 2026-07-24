@@ -9,7 +9,7 @@ use SPSS\Sav\Writer;
 
 class WriteMultibyteTest extends TestCase
 {
-    public function testMultiByteLabel()
+    public function testMultiByteLabel(): void
     {
         $data = [
             'header' => [
@@ -46,19 +46,23 @@ class WriteMultibyteTest extends TestCase
         $this->assertEquals($data['variables'][0]['label'], $reader->variables[0]->label);
 
         // Long variable label
-        $this->assertEquals(mb_substr($data['variables'][1]['values'][1], 0, -2, 'UTF-8'),
-            $reader->variables[1]->label);
+        $this->assertEquals(
+            mb_substr($data['variables'][1]['values'][1], 0, -2, 'UTF-8'),
+            $reader->variables[1]->label,
+        );
 
         // Long value label
-        $this->assertEquals(mb_substr($data['variables'][1]['label'], 0, -2, 'UTF-8'),
-            $reader->valueLabels[0]->labels[0]['label']);
+        $this->assertEquals(
+            mb_substr($data['variables'][1]['label'], 0, -2, 'UTF-8'),
+            $reader->valueLabels[0]->labels[0]['label'],
+        );
     }
 
     /**
      * ISSUE #20.
      * Chinese value labels seem to work fine, but free text does not work
      */
-    public function testChinese()
+    public function testChinese(): void
     {
         $input = [
             'header' => [
@@ -116,6 +120,7 @@ class WriteMultibyteTest extends TestCase
         $buffer->rewind();
 
         $reader = Reader::fromString($buffer->getStream())->read();
+        $expected = [];
         $expected[0][0] = $input['variables'][0]['data'][0];
         $expected[0][1] = $input['variables'][1]['data'][0];
         $expected[1][0] = $input['variables'][0]['data'][1];
@@ -125,7 +130,7 @@ class WriteMultibyteTest extends TestCase
         $this->assertEquals($expected, $reader->data);
     }
 
-    public function testMultiByteVariableName()
+    public function testMultiByteVariableName(): void
     {
         $data = [
             'header' => [

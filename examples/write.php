@@ -1,13 +1,16 @@
 <?php
 
+declare(strict_types=1);
+
 use SPSS\Sav\Variable;
 
 require __DIR__ . '/../vendor/autoload.php';
 
 $file = __DIR__ . '/data.sav';
 
-$writer = new \SPSS\Sav\Writer(array(
-        'header' => array(
+$writer = new \SPSS\Sav\Writer(
+    [
+        'header' => [
             'prodName' => '@(#) IBM SPSS STATISTICS 64-bit Macintosh 23.0.0.0',
             'creationDate' => '05 Oct 18',
             'creationTime' => '01:36:53',
@@ -16,7 +19,7 @@ $writer = new \SPSS\Sav\Writer(array(
             // 'compression' => 1,
             // 'bias' => 100,
             // 'fileLabel' => '',
-        ),
+        ],
         // 'info' => [
         //     'machineInteger' => [
         //         'machineCode' => 720,
@@ -28,46 +31,46 @@ $writer = new \SPSS\Sav\Writer(array(
         //         'lowest' => -1.7976931348623155e+308,
         //     ],
         // ],
-        'variables' => array(
-            array(
+        'variables' => [
+            [
                 'name' => 'aaa',
                 'format' => Variable::FORMAT_TYPE_F,
                 'width' => 4,
                 'decimals' => 2,
                 'label' => 'test',
-                'values' => array(
+                'values' => [
                     222 => 'foo',
                     '13.22' => 'bar',
-                ),
+                ],
                 // 'missing' => [],
                 'columns' => 16,
                 'alignment' => Variable::ALIGN_RIGHT,
                 'measure' => Variable::MEASURE_SCALE,
-                'attributes' => array(
+                'attributes' => [
                     '$@Role' => Variable::ROLE_PARTITION,
-                ),
-                'data' => array(1, 1, 1),
-            ),
-            array(
+                ],
+                'data' => [1, 1, 1],
+            ],
+            [
                 'name' => 'bbbb_bbbbbb12',
                 'format' => Variable::FORMAT_TYPE_A,
                 'width' => 28,
                 // 'decimals' => 0,
                 'label' => 'test',
-                'values' => array(
+                'values' => [
                     'm' => 'male',
                     'f' => 'female',
-                ),
+                ],
                 // 'missing' => [],
                 'columns' => 8,
                 'alignment' => Variable::ALIGN_LEFT,
                 'measure' => Variable::MEASURE_NOMINAL,
-                'attributes' => array(
+                'attributes' => [
                     '$@Role' => Variable::ROLE_SPLIT,
-                ),
-                'data' => array('foo', 'bar', 'baz'),
-            ),
-            array(
+                ],
+                'data' => ['foo', 'bar', 'baz'],
+            ],
+            [
                 'name' => 'BBBB_BBBBBB13',
                 'format' => Variable::FORMAT_TYPE_COMMA,
                 'width' => 8,
@@ -80,13 +83,13 @@ $writer = new \SPSS\Sav\Writer(array(
                 'columns' => 8,
                 'alignment' => Variable::ALIGN_RIGHT,
                 'measure' => Variable::MEASURE_NOMINAL,
-                'attributes' => array(
+                'attributes' => [
                     '$@Role' => Variable::ROLE_INPUT,
-                ),
-                'data' => array(1, 1, 1),
-            ),
-        ),
-    )
+                ],
+                'data' => [1, 1, 1],
+            ],
+        ],
+    ],
 );
 
 $writer->save($file);

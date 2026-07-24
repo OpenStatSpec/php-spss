@@ -8,8 +8,9 @@ use SPSS\Sav\Record;
 
 class Header extends Record
 {
-    const NORMAL_REC_TYPE = '$FL2';
-    const ZLIB_REC_TYPE   = '$FL3';
+    public const NORMAL_REC_TYPE = '$FL2';
+
+    public const ZLIB_REC_TYPE   = '$FL3';
 
     /**
      * @var string Record type code,
@@ -73,11 +74,11 @@ class Header extends Record
     public $casesCount = -1;
 
     /**
-     * @var int Compression bias, ordinarily set to 100.
+     * @var float Compression bias, ordinarily set to 100.
      *          Only integers between 1 - bias and 251 - bias can be compressed.
      *          By assuming that its value is 100.
      */
-    public $bias = 100;
+    public $bias = 100.0;
 
     /**
      * @var string Date of creation of the system file, in ‘dd mmm yy’ format,
@@ -98,15 +99,13 @@ class Header extends Record
      */
     public $fileLabel;
 
-    /**
-     * @param  Buffer  $buffer
-     */
-    public function read(Buffer $buffer)
+    public function read(Buffer $buffer): void
     {
         $this->recType = $buffer->readString(4);
         if (self::NORMAL_REC_TYPE !== $this->recType && self::ZLIB_REC_TYPE !== $this->recType) {
             throw new Exception('Read header error: this is not a valid SPSS file. Does not start with $FL2 or $FL3.');
         }
+
         $this->prodName   = trim($buffer->readString(60));
         $this->layoutCode = $buffer->readInt();
 
@@ -123,7 +122,12 @@ class Header extends Record
         $this->compression     = $buffer->readInt();
         $this->weightIndex     = $buffer->readInt();
         $this->casesCount      = $buffer->readInt();
-        $this->bias            = $buffer->readDouble();
+        $bias = $buffer->readDouble();
+        if (false === $bias) {
+            throw new Exception('Read header error: compression bias is missing.');
+        }
+
+        $this->bias            = $bias;
         $this->creationDate    = $buffer->readString(9);
         $this->creationTime    = $buffer->readString(8);
         $this->fileLabel       = trim($buffer->readString(64));
@@ -132,7 +136,7 @@ class Header extends Record
         $buffer->skip(3);
     }
 
-    public function write(Buffer $buffer)
+    public function write(Buffer $buffer): void
     {
         $buffer->write($this->recType);
         $buffer->writeString($this->prodName, 60);
@@ -148,7 +152,7 @@ class Header extends Record
         $buffer->writeNull(3);
     }
 
-    public function increaseCasesCount(Buffer $buffer)
+    public function increaseCasesCount(Buffer $buffer): void
     {
         // Jump to the position of the casesCount in the header, re-write it and keep the current position.
         // recType + prodName + layoutCode + nominalCaseSize + compression + weightIndex

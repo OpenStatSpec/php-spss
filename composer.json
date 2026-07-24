@@ -22,13 +22,18 @@
     }
   ],
   "require": {
-    "php": ">=5.6",
-    "ext-mbstring": "*",
-    "ext-bcmath": "*"
+    "php": "^8.4.1",
+    "ext-bcmath": "*",
+    "ext-mbstring": "*"
   },
   "require-dev": {
-    "friendsofphp/php-cs-fixer": "^2.16",
-    "phpunit/phpunit": "^5.7 || ^6.4 || ^7.0"
+    "friendsofphp/php-cs-fixer": "^3.95",
+    "php-parallel-lint/php-parallel-lint": "^1.4",
+    "phpstan/phpstan": "^2.2",
+    "phpstan/phpstan-phpunit": "^2.0",
+    "phpstan/phpstan-strict-rules": "^2.0",
+    "phpunit/phpunit": "^13.2",
+    "rector/rector": "^2.5"
   },
   "autoload": {
     "psr-4": {
@@ -40,19 +45,42 @@
       "SPSS\\Tests\\": "tests/"
     }
   },
-  "minimum-stability": "dev",
-  "prefer-stable": true,
   "config": {
+    "allow-plugins": false,
+    "audit": {
+      "abandoned": "fail"
+    },
+    "platform": {
+      "php": "8.4.1"
+    },
     "sort-packages": true,
     "preferred-install": "dist"
   },
   "scripts": {
-    "lint": "rector process src && php-cs-fixer fix -v",
-    "test:lint": "php-cs-fixer fix -v --dry-run && rector process src --dry-run",
-    "test:types": "phpstan analyse --ansi --memory-limit=0",
-    "test:unit": "phpunit --no-coverage",
-    "test": [
+    "fix": [
+      "rector process",
+      "php-cs-fixer fix --verbose"
+    ],
+    "hooks:install": "git config core.hooksPath .githooks",
+    "post-install-cmd": "@hooks:install",
+    "post-update-cmd": "@hooks:install",
+    "qa": [
+      "@test:composer",
+      "@test:syntax",
+      "@test:style",
+      "@test:rector",
+      "@test:types",
       "@test:unit"
-    ]
+    ],
+    "test:composer": [
+      "@composer validate --strict",
+      "@composer audit --locked"
+    ],
+    "test:rector": "rector process --dry-run",
+    "test:style": "php-cs-fixer check --diff --verbose",
+    "test:syntax": "parallel-lint --exclude vendor .php-cs-fixer.dist.php rector.php src tests examples",
+    "test:types": "phpstan analyse --no-progress --memory-limit=1G",
+    "test:unit": "phpunit --no-coverage",
+    "test": "@qa"
   }
 }

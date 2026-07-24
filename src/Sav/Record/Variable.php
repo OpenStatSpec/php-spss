@@ -8,17 +8,17 @@ use SPSS\Utils;
 
 class Variable extends Record
 {
-    const TYPE = 2;
+    public const TYPE = 2;
 
     /**
      * Number of bytes really stored in each segment of a very long string variable.
      */
-    const REAL_VLS_CHUNK = 255;
+    public const REAL_VLS_CHUNK = 255;
 
     /**
      * Number of bytes per segment by which the amount of space for very long string variables is allocated.
      */
-    const EFFECTIVE_VLS_CHUNK = 252;
+    public const EFFECTIVE_VLS_CHUNK = 252;
 
     /**
      * Set to 0 for a numeric variable.
@@ -32,7 +32,7 @@ class Variable extends Record
     /**
      * The real record position of the variable inside the file.
      */
-    public $realPosition;
+    public ?int $realPosition = null;
 
     /**
      * If the variable has no missing values, set to 0.
@@ -52,7 +52,7 @@ class Variable extends Record
      * Print format for this variable.
      * [0, format, width, decimals].
      *
-     * @var array
+     * @var array{int, int, int, int}
      */
     public $print = [0, 0, 0, 0];
 
@@ -60,7 +60,7 @@ class Variable extends Record
      * Write format for this variable.
      * [0, format, width, decimals].
      *
-     * @var array
+     * @var array{int, int, int, int}
      */
     public $write = [0, 0, 0, 0];
 
@@ -77,7 +77,7 @@ class Variable extends Record
      * It has length label_len, rounded up to the nearest multiple of 32 bits.
      * The first label_len characters are the variable’s variable label.
      *
-     * @var string
+     * @var string|null
      */
     public $label;
 
@@ -92,7 +92,7 @@ class Variable extends Record
      * and the second element denotes the maximum value in the range.
      * When a range plus a value are present, the third element denotes the additional discrete missing value.
      *
-     * @var array
+     * @var list<float|string>
      */
     public $missingValues = [];
 
@@ -100,15 +100,13 @@ class Variable extends Record
      * Returns true if WIDTH is a very long string width, false otherwise.
      *
      * @param int $width
-     *
-     * @return int
      */
-    public static function isVeryLong($width)
+    public static function isVeryLong($width): bool
     {
         return $width > self::REAL_VLS_CHUNK;
     }
 
-    public function read(Buffer $buffer)
+    public function read(Buffer $buffer): void
     {
         $this->width               = $buffer->readInt();
         $hasLabel                  = $buffer->readInt();
@@ -120,6 +118,7 @@ class Variable extends Record
             $labelLength = $buffer->readInt();
             $this->label = $buffer->readString($labelLength, 4);
         }
+
         if (0 !== $this->missingValuesFormat) {
             for ($i = 0, $iMax = abs($this->missingValuesFormat); $i < $iMax; $i++) {
                 $this->missingValues[] = $buffer->readDouble();
@@ -127,10 +126,10 @@ class Variable extends Record
         }
     }
 
-    public function write(Buffer $buffer)
+    public function write(Buffer $buffer): void
     {
         $seg0width = Utils::segmentAllocWidth($this->width, 0);
-        $hasLabel  = !empty($this->label);
+        $hasLabel  = null !== $this->label && '' !== $this->label;
 
         $buffer->writeInt(self::TYPE);
         $buffer->writeInt($seg0width);
@@ -150,6 +149,7 @@ class Variable extends Record
                 $label            = mb_substr($label, 0, -1);
                 $labelLengthBytes = mb_strlen($label, '8bit');
             }
+
             $buffer->writeInt($labelLengthBytes);
             $buffer->writeString($label, Utils::roundUp($labelLengthBytes, 4));
         }
@@ -169,7 +169,7 @@ class Variable extends Record
         $this->writeBlank($buffer, $seg0width);
 
         // Write additional segments for very long string variables.
-        if (self::isVeryLong($this->width) !== false) {
+        if (self::isVeryLong($this->width)) {
             $segmentCount = Utils::widthToSegments($this->width);
             for ($i = 1; $i < $segmentCount; $i++) {
                 $segmentWidth = Utils::segmentAllocWidth($this->width, $i);
@@ -188,10 +188,9 @@ class Variable extends Record
     }
 
     /**
-     * @param  Buffer  $buffer
      * @param  int  $width
      */
-    public function writeBlank(Buffer $buffer, $width)
+    public function writeBlank(Buffer $buffer, $width): void
     {
         // assert(self::widthToSegments($width) == 1);
 
@@ -208,20 +207,20 @@ class Variable extends Record
 
     /**
      * @param int $seg
-     *
-     * @return string
      */
-    public function getSegmentName($seg = 0)
+    public function getSegmentName($seg = 0): string
     {
         // TODO: refactory
         $str = "a";
         for ($i = 0; $i < $seg; $i++) {
-            ++$str;
+            $str = str_increment($str);
         }
+
         if (($this->name[0] === 'V') && is_numeric(mb_substr($this->name, 1))) {
             return mb_strtoupper($this->name);
         }
+
         $sufix = str_pad($str, 2, "_", STR_PAD_LEFT);
-        return mb_strtoupper(mb_substr($this->name.$sufix, 0, 8));
+        return mb_strtoupper(mb_substr($this->name . $sufix, 0, 8));
     }
 }

@@ -7,20 +7,24 @@ use SPSS\Sav\Record\Info;
 
 class VariableAttributes extends Info
 {
-    const SUBTYPE = 18;
+    public const SUBTYPE = 18;
 
+    /**
+     * @var array<array-key, mixed>
+     */
     public $data = [];
 
-    public function read(Buffer $buffer)
+    #[\Override]
+    public function read(Buffer $buffer): void
     {
         parent::read($buffer);
         $data = $buffer->readString($this->dataSize * $this->dataCount);
         foreach (explode('/', $data) as $item) {
-            list($var, $value) = explode(':', $item);
+            [$var, $value] = explode(':', $item);
             if (preg_match_all('#(.+)\((.+)\)#Uis', $value, $matches)) {
                 $this->data[$var] = [];
                 foreach ($matches[1] as $key => $val) {
-                    $this->data[$var][$val] = trim(trim($matches[2][$key]), '\'');
+                    $this->data[$var][$val] = trim(trim($matches[2][$key]), "'");
                 }
             } else {
                 $this->data[$var] = $value;
@@ -28,7 +32,8 @@ class VariableAttributes extends Info
         }
     }
 
-    public function write(Buffer $buffer)
+    #[\Override]
+    public function write(Buffer $buffer): void
     {
         $lines = [];
         foreach ($this->data as $var => $value) {
@@ -37,8 +42,10 @@ class VariableAttributes extends Info
                 foreach ($value as $key => $val) {
                     $_tmpString .= sprintf("%s('%s'\n)", $key, $val);
                 }
+
                 $value = $_tmpString;
             }
+
             $lines[] = sprintf('%s:%s', $var, $value);
         }
 

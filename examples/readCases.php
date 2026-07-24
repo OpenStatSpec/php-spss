@@ -1,34 +1,35 @@
 <?php
 
+declare(strict_types=1);
+
 require __DIR__ . '/../vendor/autoload.php';
 
-$files = array(
+$files = [
     // __DIR__ . '/test2.sav',
     __DIR__ . '/data.sav',
-);
+];
 
-function __header($str, $char = '#')
+function __header($str, $char = '#'): string
 {
-    $line = str_repeat($char, 100);
+    $line = str_repeat((string) $char, 100);
 
     $res = '';
     $res .= $line . PHP_EOL;
     $res .= "#\t\t" . $str . PHP_EOL;
-    $res .= $line . PHP_EOL;
 
-    return $res;
+    return $res . ($line . PHP_EOL);
 }
 
-function __title($title, $char = '.')
+function __title($title, $char = '.'): string
 {
     return PHP_EOL .
-        str_repeat($char, 10) . ' ' .
-        mb_strtoupper($title) . ' ' .
-        str_repeat($char, 70) .
+        str_repeat((string) $char, 10) . ' ' .
+        mb_strtoupper((string) $title) . ' ' .
+        str_repeat((string) $char, 70) .
         PHP_EOL;
 }
 
-function __content($data)
+function __content($data): string
 {
     $data = json_encode($data);
     // $data = json_decode($data, true);
@@ -62,5 +63,6 @@ foreach ($files as $file) {
         echo __title('Case ' . $reader->getCaseNumber());
         echo __content($reader->getCase());
     }
+
     echo PHP_EOL;
 }

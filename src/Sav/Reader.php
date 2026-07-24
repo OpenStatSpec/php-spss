@@ -11,32 +11,32 @@ use SPSS\Utils;
 class Reader
 {
     /**
-     * @var Header
+     * @var Header|null
      */
     public $header;
 
     /**
-     * @var Record\Variable[]
+     * @var list<Record\Variable>
      */
     public $variables = [];
 
     /**
-     * @var ValueLabel[]
+     * @var list<ValueLabel>
      */
     public $valueLabels = [];
 
     /**
-     * @var array
+     * @var list<string>
      */
     public $documents = [];
 
     /**
-     * @var Info[]
+     * @var array<int, Info>
      */
     public $info = [];
 
     /**
-     * @var array
+     * @var array<int, array<int, float|string>>
      */
     public $data = [];
 
@@ -51,27 +51,19 @@ class Reader
     public $dataPosition = -1;
 
     /**
-     * @var record
+     * @var Record\Data|null
      */
     public $record;
 
     /**
-     * @var Buffer
-     */
-    protected $_buffer;
-
-    /**
      * Reader constructor.
-     *
-     * @param  Buffer  $buffer
      */
-    private function __construct(Buffer $buffer)
+    private function __construct(protected Buffer $_buffer)
     {
-        $this->_buffer          = $buffer;
         $this->_buffer->context = $this;
     }
 
-    private function readBodyInternal()
+    private function readBodyInternal(): void
     {
         $infoCollection = new Record\InfoCollection();
         $posVar         = 0;
@@ -101,56 +93,40 @@ class Reader
 
     /**
      * @param string $file
-     *
-     * @return Reader
      */
-    public static function fromFile($file)
+    public static function fromFile($file): self
     {
         return new self(Buffer::factory(fopen($file, 'rb')));
     }
 
     /**
-     * @param string $str
-     *
-     * @return Reader
+     * @param resource|string $str
      */
-    public static function fromString($str)
+    public static function fromString($str): self
     {
         return new self(Buffer::factory($str));
     }
 
-    /**
-     * @return self
-     */
-    public function readMetaData()
+    public function readMetaData(): static
     {
         return $this->readHeader()->readBody();
     }
 
-    /**
-     * @return self
-     */
-    public function read()
+    public function read(): static
     {
         return $this->readHeader()->readBody()->readData();
     }
 
-    /**
-     * @return self
-     */
-    public function readHeader()
+    public function readHeader(): static
     {
         $this->header = Record\Header::fill($this->_buffer);
 
         return $this;
     }
 
-    /**
-     * @return self
-     */
-    public function readBody()
+    public function readBody(): static
     {
-        if (!$this->header) {
+        if ($this->header === null) {
             $this->readHeader();
         }
 
@@ -161,10 +137,11 @@ class Reader
         $headerPosition = $this->_buffer->position();
         $this->readBodyInternal();
 
-        if (isset($this->info) && isset($this->info[Record\Info\CharacterEncoding::SUBTYPE])) {
-            $encode = $this->info[Record\Info\CharacterEncoding::SUBTYPE]->value;
+        $encodingInfo = $this->info[Record\Info\CharacterEncoding::SUBTYPE] ?? null;
+        if ($encodingInfo instanceof Record\Info\CharacterEncoding) {
+            $encode = $encodingInfo->value;
             // If is not set assume the UTF-8 encode.
-            $encode = (isset($encode) && !empty($encode)) ? $encode : "UTF-8";
+            $encode = $encode !== '' ? $encode : 'UTF-8';
             $this->_buffer->charset = $encode;
 
             if ($this->_buffer->seek($headerPosition) === 0) {
@@ -186,38 +163,33 @@ class Reader
         $segmentsCount = 0;
         $tempVars = $this->variables;
         $this->variables = [];
-        foreach ($tempVars as $index => $var) {
+        foreach ($tempVars as $var) {
             // Skip blank records from the variables computation
             if ($var->width !== -1) {
                 if ($segmentsCount <= 0) {
                     $segmentsCount = Utils::widthToSegments(
-                        isset($veryLongStrings[$var->name]) ?
-                            $veryLongStrings[$var->name] : $var->width
+                        $veryLongStrings[$var->name] ?? $var->width,
                     );
                     $this->variables[] = $var;
                 }
+
                 $segmentsCount--;
             }
         }
+
         $this->dataPosition = $this->_buffer->position();
 
         return $this;
     }
 
-    /**
-     * @return self
-     */
-    public function readData()
+    public function readData(): static
     {
         $this->data = Record\Data::fill($this->_buffer)->toArray();
 
         return $this;
     }
 
-    /**
-     * @return booleam
-     */
-    public function rewindCaseIterator()
+    public function rewindCaseIterator(): bool
     {
         if ($this->dataPosition !== -1) {
             $this->lastCase = -1;
@@ -226,15 +198,13 @@ class Reader
                 return true;
             }
         }
+
         return false;
     }
 
-    /**
-     * @return bool
-     */
-    public function readCase()
+    public function readCase(): bool
     {
-        if (!isset($this->record)) {
+        if ($this->record === null) {
             $this->record = Record\Data::create();
         }
 
@@ -266,7 +236,7 @@ class Reader
     }
 
     /**
-     * @return int
+     * @return array<int, float|string>
      */
     public function getCase()
     {

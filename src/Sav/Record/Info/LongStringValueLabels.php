@@ -8,11 +8,15 @@ use SPSS\Utils;
 
 class LongStringValueLabels extends Info
 {
-    const SUBTYPE = 21;
+    public const SUBTYPE = 21;
 
+    /**
+     * @var array<array-key, mixed>
+     */
     public $data = [];
 
-    public function read(Buffer $buffer)
+    #[\Override]
+    public function read(Buffer $buffer): void
     {
         parent::read($buffer);
         $buffer = $buffer->allocate($this->dataCount * $this->dataSize);
@@ -34,26 +38,29 @@ class LongStringValueLabels extends Info
         }
     }
 
-    public function write(Buffer $buffer)
+    #[\Override]
+    public function write(Buffer $buffer): void
     {
         $localBuffer = Buffer::factory('', ['memory' => true]);
         foreach ($this->data as $varName => $data) {
             if (!isset($data['width'])) {
                 throw new \InvalidArgumentException('width required');
             }
+
             if (!isset($data['values'])) {
                 throw new \InvalidArgumentException('values required');
             }
+
             $width = (int) $data['width'];
-            $localBuffer->writeInt(mb_strlen($varName));
-            $localBuffer->writeString($varName, mb_strlen($varName));
+            $localBuffer->writeInt(mb_strlen((string) $varName));
+            $localBuffer->writeString($varName, mb_strlen((string) $varName));
             $localBuffer->writeInt($width);
             $localBuffer->writeInt(Utils::is_countable($data['values']) ? \count($data['values']) : 0);
             foreach ($data['values'] as $value => $label) {
                 $localBuffer->writeInt($width);
                 $localBuffer->writeString($value, $width);
-                $localBuffer->writeInt(mb_strlen($label));
-                $localBuffer->writeString($label, mb_strlen($label));
+                $localBuffer->writeInt(mb_strlen((string) $label));
+                $localBuffer->writeString($label, mb_strlen((string) $label));
             }
         }
 

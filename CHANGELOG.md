@@ -1,5 +1,16 @@
 # Changelog
 
+## 3.0.0 (unreleased)
+
+- Raised the minimum PHP version to 8.4.1.
+- Upgraded the test suite from PHPUnit 7 to PHPUnit 13.
+- Added PHPStan 2 level 6 analysis with strict and PHPUnit-specific rules.
+- Added PHP-CS-Fixer 3, Rector 2, parallel syntax linting, Composer validation, and dependency vulnerability auditing.
+- Replaced Travis CI with a GitHub Actions PHP 8.4/8.5 and lowest-dependency matrix.
+- Added a versioned pre-push hook that runs the complete QA suite locally.
+- Added weekly Dependabot updates for Composer and GitHub Actions.
+- Modernized the codebase for PHP 8.4 and removed PHP 8.5 deprecations.
+
 ## 2.2.2
 
 2021-01

@@ -8,7 +8,7 @@ use SPSS\Sav\Writer;
 
 class LongStringTest extends TestCase
 {
-    public function testLongString()
+    public function testLongString(): void
     {
         $firstLong = str_repeat('1234567890', 30);
         $secondLong = str_repeat('abcdefghij', 30);

@@ -8,21 +8,27 @@ use SPSS\Sav\Record\Info;
 
 class VariableDisplayParam extends Info
 {
-    const SUBTYPE = 11;
+    public const SUBTYPE = 11;
 
+    /**
+     * @var array<array-key, mixed>
+     */
     public $data = [];
 
     protected $dataSize = 4;
 
-    public function read(Buffer $buffer)
+    #[\Override]
+    public function read(Buffer $buffer): void
     {
         parent::read($buffer);
         if (4 !== $this->dataSize) {
             throw new Exception(sprintf('Error reading record type 7 subtype 11: bad data element length [%s]. Expecting 4.', $this->dataSize));
         }
+
         if (0 !== ($this->dataCount % 3)) {
             throw new Exception(sprintf('Error reading record type 7 subtype 11: number of data elements [%s] is not a multiple of 3.', $this->dataCount));
         }
+
         $itemCount = $this->dataCount / 3;
         for ($i = 0; $i < $itemCount; $i++) {
             $this->data[] = [
@@ -33,7 +39,8 @@ class VariableDisplayParam extends Info
         }
     }
 
-    public function write(Buffer $buffer)
+    #[\Override]
+    public function write(Buffer $buffer): void
     {
         if ($this->data !== []) {
             $this->dataCount = \count($this->data) * 3;

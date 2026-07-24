@@ -8,7 +8,7 @@ use SPSS\Sav\Record;
 class InfoCollection
 {
     /**
-     * @var array
+     * @var list<class-string<Record\Info>>
      */
     public static $classMap = [
         Record\Info\MachineInteger::class,
@@ -25,16 +25,14 @@ class InfoCollection
     ];
 
     /**
-     * @var array
+     * @var array<int, Record\Info>
      */
     public $data = [];
 
     /**
-     * @param int $subtype
-     *
-     * @return string
+     * @return class-string<Record\Info>
      */
-    protected static function getClassBySubtype($subtype)
+    protected static function getClassBySubtype(int $subtype): string
     {
         foreach (self::$classMap as $class) {
             if ($subtype === $class::SUBTYPE && is_subclass_of($class, Record\Info::class)) {
@@ -46,14 +44,13 @@ class InfoCollection
     }
 
     /**
-     * @param  Buffer  $buffer
-     *
-     * @return array|Record
+     * @return array<int, Record\Info>
      */
-    public function fill(Buffer $buffer)
+    public function fill(Buffer $buffer): array
     {
         $subtype              = $buffer->readInt();
-        $this->data[$subtype] = \call_user_func(self::getClassBySubtype($subtype) . '::fill', $buffer);
+        $class                = self::getClassBySubtype($subtype);
+        $this->data[$subtype] = $class::fill($buffer);
 
         return $this->data;
     }

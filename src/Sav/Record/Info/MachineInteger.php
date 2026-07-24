@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SPSS\Sav\Record\Info;
 
 use SPSS\Buffer;
@@ -7,10 +9,10 @@ use SPSS\Sav\Record\Info;
 
 class MachineInteger extends Info
 {
-    const SUBTYPE = 3;
+    public const SUBTYPE = 3;
 
     /**
-     * @var array [Major, Minor, Revision]
+     * @var array{int, int, int} [Major, Minor, Revision]
      */
     public $version = [1, 0, 0];
 
@@ -64,7 +66,8 @@ class MachineInteger extends Info
      */
     protected $dataCount = 8;
 
-    public function read(Buffer $buffer)
+    #[\Override]
+    public function read(Buffer $buffer): void
     {
         parent::read($buffer);
         $this->version          = [$buffer->readInt(), $buffer->readInt(), $buffer->readInt()];
@@ -75,7 +78,8 @@ class MachineInteger extends Info
         $this->characterCode    = $buffer->readInt();
     }
 
-    public function write(Buffer $buffer)
+    #[\Override]
+    public function write(Buffer $buffer): void
     {
         parent::write($buffer);
         $buffer->writeInt($this->version[0]);

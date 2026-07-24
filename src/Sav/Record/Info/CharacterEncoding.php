@@ -7,26 +7,35 @@ use SPSS\Sav\Record\Info;
 
 class CharacterEncoding extends Info
 {
-    const SUBTYPE = 20;
+    public const SUBTYPE = 20;
+
+    public string $value;
 
     /**
-     * @var string
+     * @param array<array-key, mixed>|string $value
      */
-    public $value;
-
-    /** @noinspection MagicMethodsValidityInspection */
-    public function __construct($value)
+    public function __construct(array|string $value = [])
     {
+        if (is_array($value)) {
+            parent::__construct($value);
+            $this->value ??= '';
+
+            return;
+        }
+
+        parent::__construct();
         $this->value = $value;
     }
 
-    public function read(Buffer $buffer)
+    #[\Override]
+    public function read(Buffer $buffer): void
     {
         parent::read($buffer);
         $this->value = $buffer->readString($this->dataSize * $this->dataCount);
     }
 
-    public function write(Buffer $buffer)
+    #[\Override]
+    public function write(Buffer $buffer): void
     {
         $this->dataCount = \strlen($this->value);
         parent::write($buffer);
