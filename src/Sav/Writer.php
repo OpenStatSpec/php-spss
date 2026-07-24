@@ -499,6 +499,23 @@ class Writer
             $fileAttributes[$attribute->name] = $attribute->values();
         }
 
+        $machineInteger = [];
+        if (
+            null !== $technical->sourceVersion
+            && preg_match('/(\d+)\.(\d+)\.(\d+)/', $technical->sourceVersion, $version)
+        ) {
+            $machineInteger['version'] = [(int) $version[1], (int) $version[2], (int) $version[3]];
+        }
+        if (null !== $technical->machineCode) {
+            $machineInteger['machineCode'] = $technical->machineCode;
+        }
+        if (null !== $technical->floatingPointRepresentation) {
+            $machineInteger['floatingPointRep'] = $technical->floatingPointRepresentation;
+        }
+        if (null !== $technical->endianness) {
+            $machineInteger['endianness'] = $technical->endianness;
+        }
+
         return [
             'header' => [
                 'recType' => $recordType,
@@ -512,7 +529,10 @@ class Writer
                 'fileLabel' => $dataset->metadata->label,
             ],
             'variables' => $variables,
-            'info' => ['characterEncoding' => $technical->encoding],
+            'info' => [
+                'characterEncoding' => $technical->encoding,
+                'machineInteger' => $machineInteger,
+            ],
             'documents' => $dataset->metadata->documents(),
             'fileAttributes' => $fileAttributes,
             'variableSets' => $dataset->metadata->variableSets(),

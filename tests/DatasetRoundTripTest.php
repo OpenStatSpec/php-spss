@@ -110,6 +110,8 @@ class DatasetRoundTripTest extends TestCase
         $actual = Reader::fromString($buffer->getStream())->readDataset();
 
         $this->assertSame('Typed round-trip', $actual->metadata->label);
+        $this->assertSame('sav', $actual->technicalMetadata->sourceFormat);
+        $this->assertSame('3.0.0', $actual->technicalMetadata->sourceVersion);
         $this->assertSame('case_weight', $actual->metadata->weightVariableName);
         $this->assertSame(['integration document'], $actual->metadata->documents());
         $this->assertSame(['typed', 'round-trip'], $actual->metadata->attributes()[0]->values());

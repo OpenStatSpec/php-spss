@@ -654,7 +654,9 @@ final class DatasetAssembler
         }
 
         return new FileTechnicalMetadata(
-            sourceFormat: 'sav',
+            sourceFormat: Header::ZLIB_REC_TYPE === $header->recType
+                ? 'zsav'
+                : 'sav',
             recordType: $header->recType,
             sourceVersion: $sourceVersion,
             provenance: $reader->source(),
