@@ -27,9 +27,17 @@ class InfoCollection
     ];
 
     /**
+     * Legacy subtype-keyed view. Repeated subtypes replace the previous value.
+     *
      * @var array<int, Record\Info>
      */
     public $data = [];
+
+    /** @var list<Record\Info> Physical records in file order, including duplicate subtypes. */
+    public $records = [];
+
+    /** @var array<int, Record\Info> Semantically merged subtype view. */
+    public $mergedData = [];
 
     /**
      * @return class-string<Record\Info>
@@ -54,10 +62,26 @@ class InfoCollection
      */
     public function fill(Buffer $buffer): array
     {
-        $subtype              = $buffer->readInt();
-        $class                = self::getClassBySubtype($subtype);
+        $subtype = $buffer->readInt();
+        $class = self::getClassBySubtype($subtype);
         $initialData = Record\Info\MultipleResponseSets::class === $class ? ['subtype' => $subtype] : [];
-        $this->data[$subtype] = $class::fill($buffer, $initialData);
+        $record = $class::fill($buffer, $initialData);
+        $this->records[] = $record;
+        $this->data[$subtype] = $record;
+
+        if ($record instanceof Record\Info\VariableAttributes) {
+            $mergedRecord = $this->mergedData[$subtype] ?? null;
+            if ($mergedRecord instanceof Record\Info\VariableAttributes) {
+                $mergedRecord = clone $mergedRecord;
+                $mergedRecord->merge($record);
+            } else {
+                $mergedRecord = clone $record;
+            }
+
+            $this->mergedData[$subtype] = $mergedRecord;
+        } else {
+            $this->mergedData[$subtype] = $record;
+        }
 
         return $this->data;
     }
