@@ -111,6 +111,7 @@ class Variable extends Record
         $this->width               = $buffer->readInt();
         $hasLabel                  = $buffer->readInt();
         $this->missingValuesFormat = $buffer->readInt();
+        $this->validateMissingValuesFormat();
         $this->print               = Utils::intToBytes($buffer->readInt());
         $this->write               = Utils::intToBytes($buffer->readInt());
         $this->name                = rtrim($buffer->readString(8));
@@ -121,13 +122,28 @@ class Variable extends Record
 
         if (0 !== $this->missingValuesFormat) {
             for ($i = 0, $iMax = abs($this->missingValuesFormat); $i < $iMax; $i++) {
-                $this->missingValues[] = $buffer->readDouble();
+                if (0 === $this->width) {
+                    $value = $buffer->readDouble();
+                    if (false === $value) {
+                        throw new \InvalidArgumentException('Unable to read numeric missing value.');
+                    }
+                } else {
+                    $value = $buffer->readString(8);
+                    if (false === $value) {
+                        throw new \InvalidArgumentException('Unable to read string missing value.');
+                    }
+
+                    $value = rtrim($value, ' ');
+                }
+
+                $this->missingValues[] = $value;
             }
         }
     }
 
     public function write(Buffer $buffer): void
     {
+        $this->validateMissingValuesFormat(true);
         $seg0width = Utils::segmentAllocWidth($this->width, 0);
         $hasLabel  = null !== $this->label && '' !== $this->label;
 
@@ -184,6 +200,32 @@ class Variable extends Record
 
                 $this->writeBlank($buffer, $segmentWidth);
             }
+        }
+    }
+
+    private function validateMissingValuesFormat(bool $validateCount = false): void
+    {
+        if (!in_array($this->missingValuesFormat, [0, 1, 2, 3, -2, -3], true)) {
+            throw new \InvalidArgumentException(sprintf(
+                'Invalid missing values format "%s".',
+                $this->missingValuesFormat,
+            ));
+        }
+
+        if ($this->width > 0 && $this->missingValuesFormat < 0) {
+            throw new \InvalidArgumentException('Missing value ranges are only valid for numeric variables.');
+        }
+
+        if (-1 === $this->width && 0 !== $this->missingValuesFormat) {
+            throw new \InvalidArgumentException('Continuation records cannot define missing values.');
+        }
+
+        if ($validateCount && \count($this->missingValues) !== abs($this->missingValuesFormat)) {
+            throw new \InvalidArgumentException(sprintf(
+                'Missing values format "%d" requires exactly %d values.',
+                $this->missingValuesFormat,
+                abs($this->missingValuesFormat),
+            ));
         }
     }
 

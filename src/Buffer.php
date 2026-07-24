@@ -95,7 +95,11 @@ class Buffer
             $this->skip($length);
         }
 
-        return new self($stream);
+        $buffer = new self($stream);
+        $buffer->charset = $this->charset;
+        $buffer->isBigEndian = $this->isBigEndian;
+
+        return $buffer;
     }
 
     public function skip(int $length): void

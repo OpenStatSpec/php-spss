@@ -4,7 +4,6 @@ namespace SPSS\Sav\Record\Info;
 
 use SPSS\Buffer;
 use SPSS\Sav\Record\Info;
-use SPSS\Utils;
 
 class LongStringValueLabels extends Info
 {
@@ -19,20 +18,55 @@ class LongStringValueLabels extends Info
     public function read(Buffer $buffer): void
     {
         parent::read($buffer);
-        $buffer = $buffer->allocate($this->dataCount * $this->dataSize);
-        while ($varNameLength = $buffer->readInt()) {
-            $varName              = $buffer->readString($varNameLength);
-            $varWidth             = $buffer->readInt(); // The width of the variable, in bytes, which will be between 9 and 32767
-            $valuesCount          = $buffer->readInt();
+        $payloadLength = $this->dataCount * $this->dataSize;
+        $buffer = $buffer->allocate($payloadLength);
+        while ($buffer->position() < $payloadLength) {
+            $varNameLength = $buffer->readInt();
+            if (false === $varNameLength || $varNameLength <= 0) {
+                throw new \InvalidArgumentException('Invalid variable name length.');
+            }
+
+            $varName = $buffer->readString($varNameLength);
+            if (false === $varName) {
+                throw new \InvalidArgumentException('Unable to read variable name.');
+            }
+
+            $varWidth = $buffer->readInt();
+            if (false === $varWidth || $varWidth < 9 || $varWidth > 32767) {
+                throw new \InvalidArgumentException('width must be between 9 and 32767 bytes');
+            }
+
+            $valuesCount = $buffer->readInt();
+            if (false === $valuesCount || $valuesCount < 0) {
+                throw new \InvalidArgumentException('Invalid value label count.');
+            }
+
             $this->data[$varName] = [
                 'width'  => $varWidth,
                 'values' => [],
             ];
             for ($i = 0; $i < $valuesCount; $i++) {
-                $valueLength                            = $buffer->readInt();
-                $value                                  = rtrim($buffer->readString($valueLength));
-                $labelLength                            = $buffer->readInt();
-                $label                                  = rtrim($buffer->readString($labelLength));
+                $valueLength = $buffer->readInt();
+                if ($valueLength !== $varWidth) {
+                    throw new \InvalidArgumentException('Value length must equal the variable width.');
+                }
+
+                $value = $buffer->readString($valueLength);
+                if (false === $value) {
+                    throw new \InvalidArgumentException('Unable to read value label value.');
+                }
+
+                $labelLength = $buffer->readInt();
+                if (false === $labelLength || $labelLength < 0 || $labelLength > 120) {
+                    throw new \InvalidArgumentException('label must not exceed 120 bytes');
+                }
+
+                $label = $buffer->readString($labelLength);
+                if (false === $label) {
+                    throw new \InvalidArgumentException('Unable to read value label.');
+                }
+
+                $value = rtrim($value, ' ');
                 $this->data[$varName]['values'][$value] = $label;
             }
         }
@@ -42,6 +76,8 @@ class LongStringValueLabels extends Info
     public function write(Buffer $buffer): void
     {
         $localBuffer = Buffer::factory('', ['memory' => true]);
+        $localBuffer->charset = $buffer->charset;
+        $localBuffer->isBigEndian = $buffer->isBigEndian;
         foreach ($this->data as $varName => $data) {
             if (!isset($data['width'])) {
                 throw new \InvalidArgumentException('width required');
@@ -51,16 +87,37 @@ class LongStringValueLabels extends Info
                 throw new \InvalidArgumentException('values required');
             }
 
+            if (!\is_array($data['values'])) {
+                throw new \InvalidArgumentException('values must be an array');
+            }
+
             $width = (int) $data['width'];
-            $localBuffer->writeInt(mb_strlen((string) $varName));
-            $localBuffer->writeString($varName, mb_strlen((string) $varName));
+            if ($width < 9 || $width > 32767) {
+                throw new \InvalidArgumentException('width must be between 9 and 32767 bytes');
+            }
+
+            $varName = (string) $varName;
+            $varNameLength = self::encodedLength($buffer, $varName);
+            $localBuffer->writeInt($varNameLength);
+            $localBuffer->writeString($varName, $varNameLength);
             $localBuffer->writeInt($width);
-            $localBuffer->writeInt(Utils::is_countable($data['values']) ? \count($data['values']) : 0);
+            $localBuffer->writeInt(\count($data['values']));
             foreach ($data['values'] as $value => $label) {
+                $value = (string) $value;
+                if (self::encodedLength($buffer, $value) > $width) {
+                    throw new \InvalidArgumentException('value exceeds the variable width');
+                }
+
+                $label = (string) $label;
+                $labelLength = self::encodedLength($buffer, $label);
+                if ($labelLength > 120) {
+                    throw new \InvalidArgumentException('label must not exceed 120 bytes');
+                }
+
                 $localBuffer->writeInt($width);
                 $localBuffer->writeString($value, $width);
-                $localBuffer->writeInt(mb_strlen((string) $label));
-                $localBuffer->writeString($label, mb_strlen((string) $label));
+                $localBuffer->writeInt($labelLength);
+                $localBuffer->writeString($label, $labelLength);
             }
         }
 
@@ -71,5 +128,16 @@ class LongStringValueLabels extends Info
             $localBuffer->rewind();
             $buffer->writeStream($localBuffer->getStream());
         }
+    }
+
+    private static function encodedLength(Buffer $buffer, string $value): int
+    {
+        $charsetTo = $buffer->charset ?? mb_internal_encoding();
+        $charsetFrom = mb_internal_encoding();
+        if (strtolower($charsetFrom) !== strtolower($charsetTo)) {
+            $value = mb_convert_encoding($value, $charsetTo, $charsetFrom);
+        }
+
+        return \strlen($value);
     }
 }

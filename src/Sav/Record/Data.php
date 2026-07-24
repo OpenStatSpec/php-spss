@@ -210,15 +210,20 @@ class Data extends Record
             $sysmis = NAN;
         }
 
-        if ($this->dataBuffer === null) {
-            $this->dataBuffer = Buffer::factory('', ['memory' => true]);
+        if ($this->startData === -1) {
             $buffer->writeInt(self::TYPE);
             $this->startData = $buffer->position();
             $buffer->writeInt(0);
+
+            if ($compressed) {
+                $this->dataBuffer = Buffer::factory('', ['memory' => true]);
+            }
         }
 
         $this->writeCaseData($buffer, $row, $compressed, $bias, $variables, $veryLongStrings, $sysmis);
-        $this->writeOpcode($buffer, self::OPCODE_EOF);
+        if ($compressed) {
+            $this->writeOpcode($buffer, self::OPCODE_EOF);
+        }
     }
 
     public function write(Buffer $buffer): void
@@ -260,7 +265,9 @@ class Data extends Record
         $buffer->writeInt(self::TYPE);
         $this->startData = $buffer->position();
         $buffer->writeInt(0);
-        $this->dataBuffer = Buffer::factory('', ['memory' => true]);
+        if ($compressed) {
+            $this->dataBuffer = Buffer::factory('', ['memory' => true]);
+        }
 
         if (\count($this->matrix) > 0) {
             for ($case = 0; $case < $casesCount; $case++) {
@@ -277,7 +284,9 @@ class Data extends Record
             }
         }
 
-        $this->writeOpcode($buffer, self::OPCODE_EOF);
+        if ($compressed) {
+            $this->writeOpcode($buffer, self::OPCODE_EOF);
+        }
     }
 
     /**
@@ -488,7 +497,7 @@ class Data extends Record
                                 $this->dataBuffer->writeString($val, 8);
                             }
                         } else {
-                            $this->dataBuffer->writeString($val, 8);
+                            $buffer->writeString($val, 8, $charsetTo);
                         }
 
                         $offset += $chunkSize;
