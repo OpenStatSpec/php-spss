@@ -34,6 +34,7 @@ final class ValueLabelRoundTripTest extends TestCase
 
         $buffer = $writer->getBuffer();
         $buffer->rewind();
+
         $reader = Reader::fromString($buffer->getStream())->read();
 
         $this->assertCount(2, $reader->valueLabels);

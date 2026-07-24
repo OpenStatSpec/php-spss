@@ -10,9 +10,6 @@ final readonly class VariableMetadata
 
     public MissingValues $missingValues;
 
-    /** @var list<VariableAttribute> */
-    private array $attributes;
-
     /**
      * Width is the storage width: 0 for numeric variables and 1..32767 for strings.
      *
@@ -32,7 +29,7 @@ final readonly class VariableMetadata
         public Alignment $alignment = Alignment::LEFT,
         public int $columns = 8,
         public VariableRole $role = VariableRole::INPUT,
-        array $attributes = [],
+        private array $attributes = [],
         public ?int $dictionaryIndex = null,
     ) {
         if ('' === trim($this->name)) {
@@ -61,7 +58,6 @@ final readonly class VariableMetadata
 
         $this->valueLabels = $valueLabels ?? new ValueLabelSet([]);
         $this->missingValues = $missingValues ?? MissingValues::none();
-        $this->attributes = $attributes;
     }
 
     /** @return list<VariableAttribute> */

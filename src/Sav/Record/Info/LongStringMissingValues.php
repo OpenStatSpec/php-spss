@@ -71,14 +71,14 @@ class LongStringMissingValues extends Info
                 }
 
                 $varName = (string) $varName;
-                $varNameLength = \strlen(self::encode($buffer, $varName));
+                $varNameLength = \strlen($this->encode($buffer, $varName));
                 $localBuffer->writeInt($varNameLength);
                 $localBuffer->writeString($varName, $varNameLength);
                 $localBuffer->write(\chr($count), 1);
                 $localBuffer->writeInt(8);
                 foreach ($values as $value) {
                     $value = (string) $value;
-                    if (\strlen(rtrim(self::encode($buffer, $value), ' ')) > 8) {
+                    if (\strlen(rtrim($this->encode($buffer, $value), ' ')) > 8) {
                         throw new \InvalidArgumentException('Only the first 8 bytes of a long string missing value may be non-spaces.');
                     }
 
@@ -93,7 +93,7 @@ class LongStringMissingValues extends Info
         }
     }
 
-    private static function encode(Buffer $buffer, string $value): string
+    private function encode(Buffer $buffer, string $value): string
     {
         $charsetTo = $buffer->charset ?? mb_internal_encoding();
         $charsetFrom = mb_internal_encoding();

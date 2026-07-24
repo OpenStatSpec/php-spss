@@ -6,19 +6,8 @@ namespace SPSS\Sav;
 
 final readonly class MissingValues
 {
-    /** @var list<int|float|string> */
-    private array $discreteValues;
-
     /** @param list<int|float|string> $discreteValues */
-    private function __construct(
-        public MissingValuesKind $kind,
-        array $discreteValues = [],
-        public int|float|null $lower = null,
-        public int|float|null $upper = null,
-        public int|float|null $additionalValue = null,
-    ) {
-        $this->discreteValues = $discreteValues;
-    }
+    private function __construct(public MissingValuesKind $kind, private array $discreteValues = [], public int|float|null $lower = null, public int|float|null $upper = null, public int|float|null $additionalValue = null) {}
 
     public static function none(): self
     {

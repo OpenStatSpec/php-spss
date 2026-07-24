@@ -163,8 +163,8 @@ class SavTypedModelTest extends TestCase
 
     public function testDatasetKeepsTypedDictionaryAndRowsOrdered(): void
     {
-        $score = self::numericVariable('score', 'SCOR');
-        $group = self::stringVariable('group', 'GRP');
+        $score = $this->numericVariable('score', 'SCOR');
+        $group = $this->stringVariable('group', 'GRP');
         $dictionary = new VariableDictionary([$score, $group]);
         $metadata = new FileMetadata(label: 'Survey');
         $technicalMetadata = new FileTechnicalMetadata(
@@ -199,8 +199,8 @@ class SavTypedModelTest extends TestCase
         $this->expectExceptionMessage('Duplicate dictionary variable name');
 
         new VariableDictionary([
-            self::numericVariable('score'),
-            self::numericVariable('SCORE'),
+            $this->numericVariable('score'),
+            $this->numericVariable('SCORE'),
         ]);
     }
 
@@ -210,7 +210,7 @@ class SavTypedModelTest extends TestCase
         $this->expectExceptionMessage('one value per variable');
 
         new Dataset(
-            dictionary: new VariableDictionary([self::numericVariable('score')]),
+            dictionary: new VariableDictionary([$this->numericVariable('score')]),
             rows: [[1, 2]],
         );
     }
@@ -261,7 +261,7 @@ class SavTypedModelTest extends TestCase
         );
     }
 
-    private static function numericVariable(string $name, ?string $shortName = null): VariableMetadata
+    private function numericVariable(string $name, ?string $shortName = null): VariableMetadata
     {
         $format = new VariableFormat(Variable::FORMAT_TYPE_F, 8);
 
@@ -275,7 +275,7 @@ class SavTypedModelTest extends TestCase
         );
     }
 
-    private static function stringVariable(string $name, ?string $shortName = null): VariableMetadata
+    private function stringVariable(string $name, ?string $shortName = null): VariableMetadata
     {
         $format = new VariableFormat(Variable::FORMAT_TYPE_A, 8);
 

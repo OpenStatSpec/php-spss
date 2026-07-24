@@ -37,10 +37,10 @@ final readonly class FileMetadata
             throw new \InvalidArgumentException('A weight variable name cannot be empty.');
         }
 
-        self::assertListOf($documents, 'documents', 'string');
-        self::assertListOf($attributes, 'attributes', FileAttribute::class);
-        self::assertListOf($variableSets, 'variable sets', VariableSet::class);
-        self::assertListOf($multipleResponseSets, 'multiple-response sets', MultipleResponseSet::class);
+        $this->assertListOf($documents, 'documents', 'string');
+        $this->assertListOf($attributes, 'attributes', FileAttribute::class);
+        $this->assertListOf($variableSets, 'variable sets', VariableSet::class);
+        $this->assertListOf($multipleResponseSets, 'multiple-response sets', MultipleResponseSet::class);
 
         $this->documents = $documents;
         $this->attributes = $attributes;
@@ -73,7 +73,7 @@ final readonly class FileMetadata
     }
 
     /** @param array<array-key, mixed> $values */
-    private static function assertListOf(array $values, string $description, string $type): void
+    private function assertListOf(array $values, string $description, string $type): void
     {
         if (!array_is_list($values)) {
             throw new \InvalidArgumentException(sprintf('File metadata %s must be a list.', $description));

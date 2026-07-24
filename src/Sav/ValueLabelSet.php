@@ -6,9 +6,6 @@ namespace SPSS\Sav;
 
 final readonly class ValueLabelSet
 {
-    /** @var list<ValueLabel> */
-    private array $labels;
-
     /** @var list<string> */
     private array $variableNames;
 
@@ -16,15 +13,13 @@ final readonly class ValueLabelSet
      * @param list<ValueLabel> $labels
      * @param list<string>     $variableNames
      */
-    public function __construct(array $labels, array $variableNames = [])
+    public function __construct(private array $labels, array $variableNames = [])
     {
         foreach ($variableNames as $variableName) {
             if ('' === trim($variableName)) {
                 throw new \InvalidArgumentException('A value label variable name cannot be empty.');
             }
         }
-
-        $this->labels = $labels;
         $this->variableNames = $variableNames;
     }
 
