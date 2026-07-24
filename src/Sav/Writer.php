@@ -473,7 +473,8 @@ class Writer
         }
 
         $technical = $dataset->technicalMetadata;
-        $compression = $technical->compression ?? 1;
+        $compression = $technical->compression
+            ?? ('zsav' === strtolower($technical->sourceFormat) ? 2 : 1);
         $recordType = $technical->recordType
             ?? (2 === $compression ? Record\Header::ZLIB_REC_TYPE : Record\Header::NORMAL_REC_TYPE);
         $createdAt = $dataset->metadata->createdAt;

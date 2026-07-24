@@ -25,56 +25,70 @@ final class OpenStatSpecAcceptanceTest extends TestCase
 {
     #[DataProvider('savContainerProvider')]
     public function testTypedSemanticReadWriteReadPreservesAcceptanceDataset(
-        string $recordType,
-        int $compression,
+        string $sourceFormat,
+        ?string $recordType,
+        ?int $compression,
+        string $expectedRecordType,
+        int $expectedCompression,
     ): void {
         $longUtf8Value = str_repeat('Õ', 320);
         self::assertSame(320, mb_strlen($longUtf8Value));
 
-        $source = $this->acceptanceDataset($recordType, $compression, $longUtf8Value);
+        $source = $this->acceptanceDataset($sourceFormat, $recordType, $compression, $longUtf8Value);
         $firstRead = $this->writeAndRead($source);
         $secondRead = $this->writeAndRead($firstRead);
 
-        self::assertSame($recordType, $firstRead->technicalMetadata->recordType);
-        self::assertSame($compression, $firstRead->technicalMetadata->compression);
+        self::assertSame($expectedRecordType, $firstRead->technicalMetadata->recordType);
+        self::assertSame($expectedCompression, $firstRead->technicalMetadata->compression);
+        self::assertSame($sourceFormat, $firstRead->technicalMetadata->sourceFormat);
+        self::assertSame($sourceFormat, $secondRead->technicalMetadata->sourceFormat);
         self::assertSame($this->semanticSnapshot($firstRead), $this->semanticSnapshot($secondRead));
 
+        self::assertSame('OpenStatSpec acceptance', $firstRead->metadata->label);
+        self::assertSame([
+            'First documentation line',
+            'Teine dokumentatsioonirida',
+            'Third documentation line',
+        ], $firstRead->metadata->documents());
         self::assertSame('', $firstRead->row(0)[5]);
         self::assertSame('', $firstRead->row(2)[8]);
         self::assertSame($longUtf8Value, $firstRead->row(0)[8]);
 
         $this->assertMissingValues($firstRead);
         $this->assertValueLabels($firstRead);
+        $this->assertFormattedNumericValues($firstRead);
+        $this->assertFormattedNumericValues($secondRead);
     }
 
-    /** @return iterable<string, array{string, int}> */
+    /** @return iterable<string, array{string, string|null, int|null, string, int}> */
     public static function savContainerProvider(): iterable
     {
-        yield 'SAV bytecode compression' => [Header::NORMAL_REC_TYPE, 1];
-        yield 'ZSAV ZLIB compression' => [Header::ZLIB_REC_TYPE, 2];
+        yield 'SAV bytecode compression' => ['sav', Header::NORMAL_REC_TYPE, 1, Header::NORMAL_REC_TYPE, 1];
+        yield 'ZSAV ZLIB compression' => ['zsav', Header::ZLIB_REC_TYPE, 2, Header::ZLIB_REC_TYPE, 2];
+        yield 'ZSAV inferred from source format' => ['zsav', null, null, Header::ZLIB_REC_TYPE, 2];
     }
 
-    private function acceptanceDataset(string $recordType, int $compression, string $longUtf8Value): Dataset
-    {
+    private function acceptanceDataset(
+        string $sourceFormat,
+        ?string $recordType,
+        ?int $compression,
+        string $longUtf8Value,
+    ): Dataset {
         $numericFormat = new VariableFormat(Variable::FORMAT_TYPE_F, 8, 2);
         $shortStringFormat = new VariableFormat(Variable::FORMAT_TYPE_A, 8);
         $longStringFormat = new VariableFormat(Variable::FORMAT_TYPE_A, 255);
+        $dateFormat = new VariableFormat(Variable::FORMAT_TYPE_DATE, 11);
+        $currencyFormat = new VariableFormat(Variable::FORMAT_TYPE_DOLLAR, 12, 2);
 
-        $numeric = static function (
-            string $name,
-            MissingValues $missingValues,
-            ?ValueLabelSet $valueLabels = null,
-        ) use ($numericFormat): VariableMetadata {
-            return new VariableMetadata(
-                name: $name,
-                type: VariableType::NUMERIC,
-                width: 0,
-                printFormat: $numericFormat,
-                writeFormat: $numericFormat,
-                valueLabels: $valueLabels,
-                missingValues: $missingValues,
-            );
-        };
+        $numeric = (static fn(string $name, MissingValues $missingValues, ?ValueLabelSet $valueLabels = null): VariableMetadata => new VariableMetadata(
+            name: $name,
+            type: VariableType::NUMERIC,
+            width: 0,
+            printFormat: $numericFormat,
+            writeFormat: $numericFormat,
+            valueLabels: $valueLabels,
+            missingValues: $missingValues,
+        ));
 
         $variables = [
             $numeric('missing_one', MissingValues::discrete(-1)),
@@ -118,19 +132,41 @@ final class OpenStatSpecAcceptanceTest extends TestCase
                     new ValueLabel('võti/üks', 'Esimene'),
                     new ValueLabel('võti:kaks', 'Teine'),
                 ], ['long_utf8']),
+                missingValues: MissingValues::discrete('MISSING'),
+            ),
+            new VariableMetadata(
+                name: 'spss_date',
+                type: VariableType::NUMERIC,
+                width: 0,
+                printFormat: $dateFormat,
+                writeFormat: $dateFormat,
+            ),
+            new VariableMetadata(
+                name: 'currency',
+                type: VariableType::NUMERIC,
+                width: 0,
+                printFormat: $currencyFormat,
+                writeFormat: $currencyFormat,
             ),
         ];
 
         return new Dataset(
             dictionary: new VariableDictionary($variables),
             rows: [
-                [-1, -1, -1, -10, -10, '', 2.5, 'B', $longUtf8Value],
-                [0, -2, -2, -5, 999, 'text', 1, 'A', 'võti/üks'],
-                [null, 0, -3, 0, 0, 'NA', null, '', ''],
+                [-1, -1, -1, -10, -10, '', 2.5, 'B', $longUtf8Value, 13_500_000_000.0, 12.5],
+                [0, -2, -2, -5, 999, 'text', 1, 'A', 'võti/üks', 13_500_086_400.0, -3.25],
+                [null, 0, -3, 0, 0, 'NA', null, '', '', null, null],
             ],
-            metadata: new FileMetadata(label: 'OpenStatSpec acceptance'),
+            metadata: new FileMetadata(
+                label: 'OpenStatSpec acceptance',
+                documents: [
+                    'First documentation line',
+                    'Teine dokumentatsioonirida',
+                    'Third documentation line',
+                ],
+            ),
             technicalMetadata: new FileTechnicalMetadata(
-                sourceFormat: 'sav',
+                sourceFormat: $sourceFormat,
                 recordType: $recordType,
                 encoding: 'UTF-8',
                 compression: $compression,
@@ -191,6 +227,27 @@ final class OpenStatSpecAcceptanceTest extends TestCase
             ],
             $this->valueLabelSnapshot($dataset, 'long_utf8'),
         );
+    }
+
+    private function assertFormattedNumericValues(Dataset $dataset): void
+    {
+        $date = $dataset->variable('spss_date');
+        $currency = $dataset->variable('currency');
+        $long = $dataset->variable('long_utf8');
+        self::assertNotNull($date);
+        self::assertNotNull($currency);
+        self::assertNotNull($long);
+        self::assertSame(VariableType::NUMERIC, $date->type);
+        self::assertSame(Variable::FORMAT_TYPE_DATE, $date->printFormat->code);
+        self::assertSame(Variable::FORMAT_TYPE_DATE, $date->writeFormat->code);
+        self::assertSame(VariableType::NUMERIC, $currency->type);
+        self::assertSame(Variable::FORMAT_TYPE_DOLLAR, $currency->printFormat->code);
+        self::assertSame(Variable::FORMAT_TYPE_DOLLAR, $currency->writeFormat->code);
+        self::assertIsFloat($dataset->row(0)[9]);
+        self::assertIsFloat($dataset->row(0)[10]);
+        self::assertNull($dataset->row(2)[9]);
+        self::assertNull($dataset->row(2)[10]);
+        self::assertSame(['MISSING'], $long->missingValues->discreteValues());
     }
 
     /** @return array<string, mixed> */
