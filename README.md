@@ -5,24 +5,48 @@
 [![Total Downloads](https://img.shields.io/packagist/dt/tiamo/spss.svg?style=flat-square)](https://packagist.org/packages/tiamo/spss)
 [![License](https://poser.pugx.org/tiamo/spss/license)](https://packagist.org/packages/tiamo/spss)
 
-A PHP library for reading and writing SPSS / PSPP .sav data files.
+A PHP library for reading and writing SPSS / PSPP SAV and ZSAV data files.
 
 ## Requirements
 
 - PHP 8.4.1 or newer
 - mbstring extension
 - bcmath extension
+- zlib extension
 
 ## Installation
 
-```
+```bash
 composer require tiamo/spss
 ```
 
 ## Usage
 
-* [Documentation](./docs/index.md)
-* [Examples](./examples)
+Read a file into the v3 typed dataset model:
+
+```php
+use SPSS\Sav\Reader;
+
+$dataset = Reader::fromFile('/path/to/input.sav')->readDataset();
+
+foreach ($dataset->rows() as $row) {
+    // Values follow the order of $dataset->variables().
+}
+```
+
+Write a typed dataset:
+
+```php
+use SPSS\Sav\Writer;
+
+$writer = new Writer($dataset);
+$writer->save('/path/to/output.sav');
+$writer->close();
+```
+
+Numeric `null` cells represent SPSS system-missing values. Strings must always be strings; an empty string is an ordinary value. SPSS dates, times, and currencies remain numeric values whose presentation is described by `VariableFormat`.
+
+See the [v3 typed Dataset guide](./docs/index.md) for creating datasets, metadata, SAV/ZSAV support, and migration from the legacy array API. The older low-level [examples](./examples) remain available during migration.
 
 ## Changelog
 
