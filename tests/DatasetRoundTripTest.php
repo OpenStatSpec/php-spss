@@ -12,6 +12,8 @@ use SPSS\Sav\FileTechnicalMetadata;
 use SPSS\Sav\Measure;
 use SPSS\Sav\MissingValues;
 use SPSS\Sav\MissingValuesKind;
+use SPSS\Sav\MultipleResponseCategoryLabels;
+use SPSS\Sav\MultipleResponseLabelSource;
 use SPSS\Sav\MultipleResponseSet;
 use SPSS\Sav\MultipleResponseSetType;
 use SPSS\Sav\Reader;
@@ -90,6 +92,22 @@ class DatasetRoundTripTest extends TestCase
                         variableNames: ['case_weight'],
                         label: 'Responses',
                     ),
+                    new MultipleResponseSet(
+                        name: '$dichotomy',
+                        type: MultipleResponseSetType::DICHOTOMY,
+                        variableNames: ['case_weight'],
+                        label: 'Dichotomy',
+                        countedValue: 1,
+                    ),
+                    new MultipleResponseSet(
+                        name: '$counted',
+                        type: MultipleResponseSetType::DICHOTOMY,
+                        variableNames: ['case_weight'],
+                        label: 'Counted values',
+                        countedValue: 2,
+                        categoryLabels: MultipleResponseCategoryLabels::COUNTED_VALUES,
+                        labelSource: MultipleResponseLabelSource::VARIABLE_LABEL,
+                    ),
                 ],
             ),
             technicalMetadata: new FileTechnicalMetadata(
@@ -116,7 +134,20 @@ class DatasetRoundTripTest extends TestCase
         $this->assertSame(['integration document'], $actual->metadata->documents());
         $this->assertSame(['typed', 'round-trip'], $actual->metadata->attributes()[0]->values());
         $this->assertSame(['case_weight', 'survey_comment'], $actual->metadata->variableSets()[0]->variableNames());
-        $this->assertSame(['case_weight'], $actual->metadata->multipleResponseSets()[0]->variableNames());
+        $responseSets = $actual->metadata->multipleResponseSets();
+        $this->assertCount(3, $responseSets);
+        $this->assertSame('$responses', $responseSets[0]->name);
+        $this->assertSame(MultipleResponseSetType::CATEGORY, $responseSets[0]->type);
+        $this->assertSame(['case_weight'], $responseSets[0]->variableNames());
+        $this->assertSame('$dichotomy', $responseSets[1]->name);
+        $this->assertSame(MultipleResponseSetType::DICHOTOMY, $responseSets[1]->type);
+        $this->assertSame(1, $responseSets[1]->countedValue);
+        $this->assertSame(MultipleResponseCategoryLabels::VARIABLE_LABELS, $responseSets[1]->categoryLabels);
+        $this->assertSame('$counted', $responseSets[2]->name);
+        $this->assertSame(MultipleResponseSetType::DICHOTOMY, $responseSets[2]->type);
+        $this->assertSame(2, $responseSets[2]->countedValue);
+        $this->assertSame(MultipleResponseCategoryLabels::COUNTED_VALUES, $responseSets[2]->categoryLabels);
+        $this->assertSame(MultipleResponseLabelSource::VARIABLE_LABEL, $responseSets[2]->labelSource);
         $this->assertSame([
             [1.0, 'alpha'],
             [null, 'NA'],
