@@ -5,6 +5,7 @@ namespace SPSS\Sav\Record;
 use SPSS\Buffer;
 use SPSS\Exception;
 use SPSS\Sav\Record;
+use SPSS\Sav\Exception\EncryptedFileException;
 
 class Header extends Record
 {
@@ -101,8 +102,15 @@ class Header extends Record
 
     public function read(Buffer $buffer): void
     {
-        $this->recType = $buffer->readString(4);
+        $headerPosition = $buffer->position();
+        $this->recType = $buffer->readString(4, charset: '8bit');
         if (self::NORMAL_REC_TYPE !== $this->recType && self::ZLIB_REC_TYPE !== $this->recType) {
+            $buffer->seek($headerPosition);
+            $wrapperHeader = $buffer->read(36);
+            if (is_string($wrapperHeader) && 'ENCRYPTED' === substr($wrapperHeader, 8, 9) && 'SAV' === substr($wrapperHeader, 17, 3)) {
+                throw new EncryptedFileException('Encrypted SAV files are not supported. Decrypt the file before reading it.');
+            }
+
             throw new Exception('Read header error: this is not a valid SPSS file. Does not start with $FL2 or $FL3.');
         }
 
@@ -120,6 +128,7 @@ class Header extends Record
 
         $this->nominalCaseSize = $buffer->readInt();
         $this->compression     = $buffer->readInt();
+        $this->validateCompressionMode();
         $this->weightIndex     = $buffer->readInt();
         $this->casesCount      = $buffer->readInt();
         $bias = $buffer->readDouble();
@@ -138,6 +147,8 @@ class Header extends Record
 
     public function write(Buffer $buffer): void
     {
+        $this->validateCompressionMode();
+
         $buffer->write($this->recType);
         $buffer->writeString($this->prodName, 60);
         $buffer->writeInt($this->layoutCode);
@@ -162,5 +173,16 @@ class Header extends Record
         $buffer->seek(80);
         $buffer->writeInt($this->casesCount);
         $buffer->seek($pos);
+    }
+
+    private function validateCompressionMode(): void
+    {
+        if (self::ZLIB_REC_TYPE === $this->recType && 2 !== $this->compression) {
+            throw new Exception('Invalid SPSS header: $FL3 requires ZLIB compression mode 2.');
+        }
+
+        if (self::NORMAL_REC_TYPE === $this->recType && 2 === $this->compression) {
+            throw new Exception('Invalid SPSS header: ZLIB compression mode 2 requires $FL3.');
+        }
     }
 }
