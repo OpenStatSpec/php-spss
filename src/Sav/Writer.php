@@ -214,6 +214,7 @@ class Writer
                 } else {
                     $valueLabel = new Record\ValueLabel([
                         'variables' => $this->variables,
+                        'stringValues' => $variable->width > 0,
                     ]);
                     foreach ($var->values as $key => $value) {
                         $valueLabel->labels[] = [
@@ -222,7 +223,7 @@ class Writer
                         ];
                     }
 
-                    $valueLabel->indexes = [$nominalIdx + 1];
+                    $valueLabel->indexes = [$nominalIdx];
                     $this->valueLabels[] = $valueLabel;
                 }
             }

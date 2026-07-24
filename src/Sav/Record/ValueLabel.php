@@ -31,6 +31,9 @@ class ValueLabel extends Record
      */
     public $indexes = [];
 
+    /** Whether values use SPSS's 8-byte short-string representation. */
+    public ?bool $stringValues = null;
+
     /**
      * @var list<Variable>
      */
@@ -78,6 +81,8 @@ class ValueLabel extends Record
             }
         }
 
+        $this->stringValues = $decodeShortVar;
+
         // Decode values for short variables
         if ($decodeShortVar) {
             foreach ($this->labels as $labelIdx => $label) {
@@ -88,8 +93,16 @@ class ValueLabel extends Record
 
     public function write(Buffer $buffer): void
     {
-        $var = (count($this->variables) > 0) ? $this->variables[count($this->variables) - 1] : null;
-        $convertToDouble = (isset($var) && ($var->width > 0));
+        $convertToDouble = $this->stringValues;
+        if (null === $convertToDouble) {
+            $convertToDouble = false;
+            foreach ($this->indexes as $variableIndex) {
+                if (isset($this->variables[$variableIndex]) && $this->variables[$variableIndex]->width > 0) {
+                    $convertToDouble = true;
+                    break;
+                }
+            }
+        }
 
         // Value label record.
         $buffer->writeInt(self::TYPE);
@@ -117,7 +130,7 @@ class ValueLabel extends Record
         $buffer->writeInt(4);
         $buffer->writeInt(\count($this->indexes));
         foreach ($this->indexes as $varIndex) {
-            $buffer->writeInt($varIndex);
+            $buffer->writeInt($varIndex + 1);
         }
     }
 }

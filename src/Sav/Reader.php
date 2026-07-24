@@ -20,6 +20,9 @@ class Reader
      */
     public $variables = [];
 
+    /** @var list<Record\Variable> All physical dictionary records, including string continuations. */
+    public array $physicalVariables = [];
+
     /**
      * @var list<ValueLabel>
      */
@@ -74,6 +77,7 @@ class Reader
                     $variable               = Record\Variable::fill($this->_buffer);
                     $variable->realPosition = $posVar;
                     $this->variables[]      = $variable;
+                    $this->physicalVariables[] = $variable;
                     $posVar++;
                     break;
                 case Record\ValueLabel::TYPE:
@@ -149,6 +153,7 @@ class Reader
                 $this->info        = [];
                 $this->documents   = [];
                 $this->variables   = [];
+                $this->physicalVariables = [];
                 $this->readBodyInternal();
             }
         }
