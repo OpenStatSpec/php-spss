@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SPSS\Sav\Record;
 
 use SPSS\Buffer;
+use SPSS\Exception;
 use SPSS\Sav\Record;
 
 /** @implements \ArrayAccess<array-key, mixed> */
@@ -31,8 +32,32 @@ class Info extends Record implements \ArrayAccess
 
     public function read(Buffer $buffer): void
     {
-        $this->dataSize  = $buffer->readInt();
-        $this->dataCount = $buffer->readInt();
+        $dataSize = $buffer->readInt();
+        $dataCount = $buffer->readInt();
+        if (false === $dataSize || false === $dataCount) {
+            throw new Exception('Invalid SPSS info record: truncated size or count.');
+        }
+
+        if ($dataSize < 0 || $dataCount < 0 || (0 === $dataSize && $dataCount > 0)) {
+            throw new Exception(sprintf('Invalid SPSS info record size/count %d/%d.', $dataSize, $dataCount));
+        }
+
+        if (0 !== $dataSize && $dataCount > intdiv(PHP_INT_MAX, $dataSize)) {
+            throw new Exception('Invalid SPSS info record: payload length overflows the supported integer range.');
+        }
+
+        $payloadLength = $dataSize * $dataCount;
+        $remaining = $buffer->remaining();
+        if ($payloadLength > $remaining) {
+            throw new Exception(sprintf(
+                'Invalid SPSS info record: declared payload is %d bytes, but only %d bytes remain.',
+                $payloadLength,
+                $remaining,
+            ));
+        }
+
+        $this->dataSize = $dataSize;
+        $this->dataCount = $dataCount;
     }
 
     public function write(Buffer $buffer): void

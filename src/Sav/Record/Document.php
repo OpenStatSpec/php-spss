@@ -3,6 +3,7 @@
 namespace SPSS\Sav\Record;
 
 use SPSS\Buffer;
+use SPSS\Exception;
 use SPSS\Sav\Record;
 
 /** @implements \ArrayAccess<array-key, mixed> */
@@ -20,8 +21,30 @@ class Document extends Record implements \ArrayAccess
     public function read(Buffer $buffer): void
     {
         $count = $buffer->readInt();
+        if (false === $count) {
+            throw new Exception('Invalid SPSS document record: missing line count.');
+        }
+
+        if ($count < 0) {
+            throw new Exception(sprintf('Invalid SPSS document record: negative line count %d.', $count));
+        }
+
+        $maximumCount = intdiv($buffer->remaining(), self::LENGTH);
+        if ($count > $maximumCount) {
+            throw new Exception(sprintf(
+                'Invalid SPSS document record: declares %d lines, but the payload can contain at most %d.',
+                $count,
+                $maximumCount,
+            ));
+        }
+
         for ($i = 0; $i < $count; $i++) {
-            $this->lines[] = trim($buffer->readString(self::LENGTH));
+            $line = $buffer->readString(self::LENGTH);
+            if (false === $line) {
+                throw new Exception(sprintf('Invalid SPSS document record: line %d is truncated.', $i + 1));
+            }
+
+            $this->lines[] = trim($line);
         }
     }
 

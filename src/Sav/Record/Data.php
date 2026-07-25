@@ -63,6 +63,8 @@ class Data extends Record
      */
     protected $zlibBuffer;
 
+    private bool $payloadValidated = false;
+
     public function readCase(Buffer $buffer, int $case): void
     {
         /* check if this is the first time */
@@ -113,6 +115,12 @@ class Data extends Record
         $caseBuffer = $buffer;
         if (2 === $buffer->context->header->compression) {
             $caseBuffer = $this->zlibBuffer ??= $this->readZlibData($buffer, $bias);
+        }
+
+        $casesCount = $this->resolveCasesCount($buffer, $info);
+        if (!$this->payloadValidated) {
+            $this->validateCasePayload($caseBuffer, $compressed, $casesCount, $variables, $veryLongStrings);
+            $this->payloadValidated = true;
         }
 
         if (($case >= 0) && ($case < $casesCount)) {
@@ -175,6 +183,9 @@ class Data extends Record
             ? $this->readZlibData($buffer, $bias)
             : $buffer;
 
+        $casesCount = $this->resolveCasesCount($buffer, $info);
+        $this->validateCasePayload($dataBuffer, $compressed, $casesCount, $variables, $veryLongStrings);
+        $this->payloadValidated = true;
         $this->opcodeIndex = 8;
 
         for ($case = 0; $case < $casesCount; $case++) {
@@ -370,9 +381,10 @@ class Data extends Record
         }
 
         if ($trailerOffset < $headerOffset + 24
+            || $trailerOffset > $fileSize
             || $trailerLength < 48
             || 0 !== ($trailerLength - 24) % 24
-            || $trailerOffset + $trailerLength !== $fileSize
+            || $trailerLength !== $fileSize - $trailerOffset
         ) {
             throw new Exception('Invalid ZSAV data: incorrect ZLIB trailer offsets or length.');
         }
@@ -421,7 +433,8 @@ class Data extends Record
                 || $uncompressedSize > $blockSize
                 || (!$isLastBlock && $uncompressedSize !== $blockSize)
                 || $compressedSize < 1
-                || $compressedOffset + $compressedSize > $trailerOffset
+                || $compressedOffset > $trailerOffset
+                || $compressedSize > $trailerOffset - $compressedOffset
             ) {
                 throw new Exception('Invalid ZSAV data: inconsistent ZLIB block descriptor.');
             }
@@ -548,6 +561,80 @@ class Data extends Record
         }
     }
 
+    /**
+     * @param array<int, Record\Info> $info
+     */
+    private function resolveCasesCount(Buffer $buffer, array $info): int
+    {
+        $casesCount = $buffer->context->header->casesCount;
+        if ($casesCount >= 0) {
+            return $casesCount;
+        }
+
+        $extended = $info[Record\Info\ExtendedNumberOfCases::SUBTYPE] ?? null;
+        if (
+            $extended instanceof Record\Info\ExtendedNumberOfCases
+            && is_finite($extended->ncases)
+            && $extended->ncases >= 0
+            && $extended->ncases <= PHP_INT_MAX
+            && floor($extended->ncases) === $extended->ncases
+        ) {
+            return (int) $extended->ncases;
+        }
+
+        throw new Exception('Invalid SPSS data: case count is unknown and no valid extended case count is available.');
+    }
+
+    /**
+     * @param list<Variable>    $variables
+     * @param array<string,int> $veryLongStrings
+     */
+    private function validateCasePayload(
+        Buffer $buffer,
+        int|bool $compression,
+        int $casesCount,
+        array $variables,
+        array $veryLongStrings,
+    ): void {
+        if (0 === $casesCount) {
+            return;
+        }
+
+        $elementsPerCase = 0;
+        foreach ($variables as $variable) {
+            $width = $veryLongStrings[$variable->name] ?? $variable->width;
+            $elements = Utils::widthToOcts($width);
+            if ($elementsPerCase > PHP_INT_MAX - $elements) {
+                throw new Exception('Invalid SPSS data: case storage size exceeds the supported integer range.');
+            }
+
+            $elementsPerCase += $elements;
+        }
+
+        if (0 === $elementsPerCase) {
+            throw new Exception('Invalid SPSS data: a positive case count requires at least one data element.');
+        }
+
+        $minimumBytesPerCase = $elementsPerCase;
+        if (0 === $compression) {
+            if ($elementsPerCase > intdiv(PHP_INT_MAX, 8)) {
+                throw new Exception('Invalid SPSS data: uncompressed case size exceeds the supported integer range.');
+            }
+
+            $minimumBytesPerCase *= 8;
+        }
+
+        $remaining = $buffer->remaining();
+        $maximumCases = intdiv($remaining, $minimumBytesPerCase);
+        if ($casesCount > $maximumCases) {
+            throw new Exception(sprintf(
+                'Invalid SPSS data: header declares %d cases, but the payload can contain at most %d.',
+                $casesCount,
+                $maximumCases,
+            ));
+        }
+    }
+
     private function streamSize(Buffer $buffer): int
     {
         $streamInfo = fstat($buffer->getStream());
@@ -563,7 +650,12 @@ class Data extends Record
     {
         do {
             if ($this->opcodeIndex >= 8) {
-                $this->opcodes     = $buffer->readBytes(8);
+                $opcodes = $buffer->readBytes(8);
+                if (false === $opcodes) {
+                    throw new Exception('Error reading data: truncated compressed opcode cluster.');
+                }
+
+                $this->opcodes = $opcodes;
                 $this->opcodeIndex = 0;
             }
 
@@ -628,14 +720,24 @@ class Data extends Record
 
             if ($isNumeric) {
                 if (!$compressed) {
-                    $result[$varNum] = $buffer->readDouble();
+                    $value = $buffer->readDouble();
+                    if (false === $value) {
+                        throw new Exception('Error reading data: truncated uncompressed numeric value.');
+                    }
+
+                    $result[$varNum] = $value;
                 } else {
                     $opcode = $this->readOpcode($buffer);
                     switch ($opcode) {
                         case self::OPCODE_EOF:
                             throw new Exception('Error reading data: unexpected end of compressed data file (cluster code 252)');
                         case self::OPCODE_RAW_DATA:
-                            $result[$varNum] = $buffer->readDouble();
+                            $value = $buffer->readDouble();
+                            if (false === $value) {
+                                throw new Exception('Error reading data: truncated compressed raw numeric value.');
+                            }
+
+                            $result[$varNum] = $value;
                             break;
                         case self::OPCODE_SYSMISS:
                             $result[$varNum] = $sysmis;
@@ -656,6 +758,9 @@ class Data extends Record
                         $val = '';
                         if (!$compressed) {
                             $val = $buffer->readString(8);
+                            if (false === $val) {
+                                throw new Exception('Error reading data: truncated uncompressed string value.');
+                            }
                         } else {
                             $opcode = $this->readOpcode($buffer);
                             switch ($opcode) {
@@ -663,6 +768,9 @@ class Data extends Record
                                     throw new Exception('Error reading data: unexpected end of compressed data file (cluster code 252)');
                                 case self::OPCODE_RAW_DATA:
                                     $val = $buffer->readString(8);
+                                    if (false === $val) {
+                                        throw new Exception('Error reading data: truncated compressed raw string value.');
+                                    }
                                     break;
                                 case self::OPCODE_WHITESPACES:
                                     $val = '        ';

@@ -6,6 +6,7 @@ namespace SPSS\Tests;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use SPSS\Buffer;
+use SPSS\Exception;
 use SPSS\Sav\Record\Info\MultipleResponseSets;
 use SPSS\Sav\Record\Info\VariableSets;
 use SPSS\Sav\Record\InfoCollection;
@@ -148,7 +149,7 @@ class InfoSetRecordsTest extends TestCase
         $buffer->write($payload);
         $buffer->rewind();
 
-        $this->expectException(\UnexpectedValueException::class);
+        $this->expectException(1 === $size ? \UnexpectedValueException::class : Exception::class);
         $this->expectExceptionMessage($message);
 
         new InfoCollection()->fill($buffer);
@@ -157,7 +158,7 @@ class InfoSetRecordsTest extends TestCase
     /** @return iterable<string, array{int, int, string, string}> */
     public static function malformedRecordProvider(): iterable
     {
-        yield 'variable set requires size one' => [5, 2, "A= x\n", 'element size must be 1'];
+        yield 'variable set requires size one' => [5, 2, "A= x\n", 'declared payload is 10 bytes'];
         yield 'variable set requires final line feed' => [5, 1, 'A= x', 'final set must end with a line feed'];
         yield 'variable set requires exact separator' => [5, 1, "A=x\n", 'expected "name= member ..."'];
         yield 'legacy record rejects E' => [7, 1, '$a=E 1 1 x 0  a b' . "\n", 'type "E" is invalid for subtype 7'];

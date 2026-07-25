@@ -367,6 +367,16 @@ class Buffer
         return $this->_position;
     }
 
+    public function remaining(): int
+    {
+        $streamInfo = fstat($this->_stream);
+        if (false === $streamInfo) {
+            throw new Exception('Unable to determine buffer size.');
+        }
+
+        return max($streamInfo['size'] - $this->_position, 0);
+    }
+
     public function seek(int $offset, int $whence = SEEK_SET): int
     {
         $result = fseek($this->_stream, $offset, $whence);

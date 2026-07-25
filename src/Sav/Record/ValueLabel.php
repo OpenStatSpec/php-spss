@@ -49,31 +49,75 @@ class ValueLabel extends Record
 
     public function read(Buffer $buffer): void
     {
-        /** @var int $labelCount Number of value labels present in this record. */
         $labelCount = $buffer->readInt();
+        if (false === $labelCount || $labelCount < 0) {
+            throw new Exception(sprintf(
+                'Invalid SPSS value label record: label count must be non-negative, got %s.',
+                false === $labelCount ? 'truncated input' : (string) $labelCount,
+            ));
+        }
+
+        $minimumLabelBytes = 16;
+        $reservedIndexHeaderBytes = 8;
+        $availableLabelBytes = max($buffer->remaining() - $reservedIndexHeaderBytes, 0);
+        $maximumLabelCount = intdiv($availableLabelBytes, $minimumLabelBytes);
+        if ($labelCount > $maximumLabelCount) {
+            throw new Exception(sprintf(
+                'Invalid SPSS value label record: declares %d labels, but the payload can contain at most %d.',
+                $labelCount,
+                $maximumLabelCount,
+            ));
+        }
 
         for ($i = 0; $i < $labelCount; $i++) {
-            // A numeric value or a short string value padded as necessary to 8 bytes in length.
-            $value          = $buffer->readDouble();
-            $labelLength    = \ord($buffer->read(1));
-            $label          = $buffer->readString(Utils::roundUp($labelLength + 1, 8) - 1);
+            $value = $buffer->readDouble();
+            $labelLengthByte = $buffer->read(1);
+            if (false === $value || false === $labelLengthByte) {
+                throw new Exception(sprintf('Invalid SPSS value label record: label %d is truncated.', $i + 1));
+            }
+
+            $labelLength = \ord($labelLengthByte);
+            $label = $buffer->readString(Utils::roundUp($labelLength + 1, 8) - 1);
+            if (false === $label) {
+                throw new Exception(sprintf('Invalid SPSS value label record: label %d text is truncated.', $i + 1));
+            }
+
             $this->labels[] = [
                 'value' => $value,
                 'label' => rtrim($label),
             ];
         }
 
-        // The value label variables record is always immediately followed after a value label record.
         $recType = $buffer->readInt();
         if (4 !== $recType) {
             throw new Exception(sprintf('Error reading Variable Index record: bad record type [%s]. Expecting Record Type 4.', $recType));
         }
 
-        // Number of variables that the associated value labels from the value label record are to be applied.
         $varCount = $buffer->readInt();
+        if (false === $varCount || $varCount < 0) {
+            throw new Exception(sprintf(
+                'Invalid SPSS value label record: variable count must be non-negative, got %s.',
+                false === $varCount ? 'truncated input' : (string) $varCount,
+            ));
+        }
+
+        $maximumVariableCount = intdiv($buffer->remaining(), 4);
+        if ($varCount > $maximumVariableCount) {
+            throw new Exception(sprintf(
+                'Invalid SPSS value label record: declares %d variables, but the payload can contain at most %d.',
+                $varCount,
+                $maximumVariableCount,
+            ));
+        }
+
         $decodeShortVar = false;
         for ($i = 0; $i < $varCount; $i++) {
-            $varIndex = $buffer->readInt() - 1;
+            $rawVarIndex = $buffer->readInt();
+            if (false === $rawVarIndex) {
+                throw new Exception(sprintf('Invalid SPSS value label record: variable index %d is truncated.', $i + 1));
+            }
+
+            $varIndex = $rawVarIndex - 1;
             $this->indexes[] = $varIndex;
 
             if (isset($this->variables[$varIndex]) && ($this->variables[$varIndex]->width > 0)) {
@@ -83,7 +127,6 @@ class ValueLabel extends Record
 
         $this->stringValues = $decodeShortVar;
 
-        // Decode values for short variables
         if ($decodeShortVar) {
             foreach ($this->labels as $labelIdx => $label) {
                 $this->labels[$labelIdx]['value'] = rtrim(Utils::doubleToString($label['value']));

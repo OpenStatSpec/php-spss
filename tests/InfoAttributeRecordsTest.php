@@ -6,6 +6,7 @@ namespace SPSS\Tests;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use SPSS\Buffer;
+use SPSS\Exception;
 use SPSS\Sav\Record\Info\DataFileAttributes;
 use SPSS\Sav\Record\Info\VariableAttributes;
 use SPSS\Sav\Record\InfoCollection;
@@ -133,7 +134,7 @@ class InfoAttributeRecordsTest extends TestCase
         $buffer->write($payload);
         $buffer->rewind();
 
-        $this->expectException(\UnexpectedValueException::class);
+        $this->expectException(1 === $size ? \UnexpectedValueException::class : Exception::class);
         $this->expectExceptionMessage($message);
         new InfoCollection()->fill($buffer);
     }
@@ -141,7 +142,7 @@ class InfoAttributeRecordsTest extends TestCase
     /** @return iterable<string, array{int, int, string, string}> */
     public static function malformedRecordProvider(): iterable
     {
-        yield 'data file attributes require size one' => [17, 2, "a('x'\n)", 'element size must be 1'];
+        yield 'data file attributes require size one' => [17, 2, "a('x'\n)", 'declared payload is 14 bytes'];
         yield 'attribute requires a value' => [17, 1, 'a()', 'must contain at least one single-quoted value'];
         yield 'attribute value requires line feed' => [17, 1, "a('x')", 'not terminated by a quote and line feed'];
         yield 'variable name requires colon' => [18, 1, "longName('x'\n)", 'variable name is not followed by a colon'];
