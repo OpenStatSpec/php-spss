@@ -13,9 +13,9 @@
   "mutators": {
     "@default": true
   },
-  "minCoveredMsi": 75,
+  "minCoveredMsi": 80,
   "timeoutsAsEscaped": true,
-  "maxTimeouts": 0,
+  "maxTimeouts": 15,
   "dotsPerRow": 80,
   "logs": {
     "text": "build/infection/infection.log",

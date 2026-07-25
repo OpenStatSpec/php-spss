@@ -10,6 +10,7 @@ return RectorConfig::configure()
         __DIR__ . '/src',
         __DIR__ . '/tests',
         __DIR__ . '/examples',
+        __DIR__ . '/tools',
     ])
     ->withSkip([
         NewlineAfterStatementRector::class,

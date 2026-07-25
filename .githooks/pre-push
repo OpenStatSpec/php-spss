@@ -16,4 +16,4 @@ fi
 
 
 echo "Running pre-push QA checks..."
-exec composer qa
+exec composer qa:release

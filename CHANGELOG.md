@@ -10,6 +10,11 @@
 - Added a versioned pre-push hook that runs the complete QA suite locally.
 - Added weekly Dependabot updates for Composer and GitHub Actions.
 - Modernized the codebase for PHP 8.4 and removed PHP 8.5 deprecations.
+- Added an immutable typed Dataset API that preserves supported file, variable, value-label, missing-value, set, and attribute metadata.
+- Added complete SAV and zlib-compressed ZSAV semantic round trips, including UTF-8 very-long strings and display metadata.
+- Added bidirectional R/haven SAV and ZSAV interoperability tests.
+- Added malformed-input fuzzing and bounded memory/resource regression tests.
+- Added line, branch, and Infection mutation gates to CI and the versioned pre-push hook.
 
 ## 2.2.2
 

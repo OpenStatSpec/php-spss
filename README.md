@@ -64,9 +64,19 @@ The install command activates the versioned pre-push hook in `.githooks`. It run
 
 ```bash
 composer qa
+composer qa:release
 ```
 
-The suite validates and audits Composer dependencies, lints PHP syntax, checks coding style, runs Rector in dry-run mode, performs PHPStan level 6 analysis with strict rules, and executes the PHPUnit 13 tests. Run `composer fix` to apply safe Rector and coding-style fixes.
+`composer qa` validates and audits Composer dependencies, lints PHP syntax, checks coding style, runs Rector in dry-run mode, performs PHPStan level 6 analysis with strict rules, and executes the PHPUnit 13 tests. `composer qa:release` additionally enforces:
+
+- at least 85% executable-line coverage;
+- at least 74% branch coverage across the deterministic branch shards;
+- Infection's mutation-testing threshold, with timeouts counted against the score and capped;
+- bidirectional SAV/ZSAV interoperability with R/haven.
+
+The release suite requires Xdebug coverage plus `Rscript` with the `haven` package. The pre-push hook runs this complete release suite. Run `composer fix` to apply safe Rector and coding-style fixes.
+
+See [Quality and release gates](./docs/quality-gates.md) for individual commands, report locations, and the rationale for each threshold.
 
 ## License
 

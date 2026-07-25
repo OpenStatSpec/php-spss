@@ -6,7 +6,7 @@ use PhpCsFixer\Config;
 use PhpCsFixer\Finder;
 
 $finder = Finder::create()
-    ->in([__DIR__ . '/src', __DIR__ . '/tests', __DIR__ . '/examples']);
+    ->in([__DIR__ . '/src', __DIR__ . '/tests', __DIR__ . '/examples', __DIR__ . '/tools']);
 
 return (new Config())
     ->setCacheFile(__DIR__ . '/.php-cs-fixer.cache')

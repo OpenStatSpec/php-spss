@@ -15,4 +15,4 @@ The gate verifies:
 - haven output read by PHP for byte-compressed SAV and ZSAV, including per-row NOP-padded opcode clusters;
 - both bulk and case-iterator PHP read paths for haven output.
 
-Exit status `0` means pass, `1` means an interoperability failure, and `77` means the optional R/haven prerequisite is unavailable. The script is intentionally not wired into CI by default.
+Exit status `0` means pass, `1` means an interoperability failure, and `77` means the R/haven prerequisite is unavailable. The gate is blocking in CI; `composer test:interop` runs it locally.

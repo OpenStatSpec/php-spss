@@ -76,13 +76,31 @@
       "@test:types",
       "@test:unit"
     ],
+    "qa:release": [
+      "@qa",
+      "@test:coverage",
+      "@test:coverage:branch",
+      "@test:mutation",
+      "@test:interop"
+    ],
     "test:composer": [
       "@composer validate --strict",
       "@composer audit --locked"
     ],
+    "test:coverage": [
+      "@php tools/prepare-qa-directories.php",
+      "@php -d xdebug.mode=coverage vendor/bin/phpunit --coverage-clover build/coverage/clover.xml",
+      "@php tools/check-coverage.php line build/coverage/clover.xml 85"
+    ],
+    "test:coverage:branch": "@php tools/run-branch-coverage.php",
+    "test:interop": "@php tools/interop/haven-roundtrip.php",
+    "test:mutation": [
+      "Composer\\Config::disableProcessTimeout",
+      "@php -d xdebug.mode=coverage vendor/bin/infection --configuration=infection.json5.dist --only-covering-test-cases --no-progress --no-interaction"
+    ],
     "test:rector": "rector process --dry-run",
     "test:style": "php-cs-fixer check --diff --verbose",
-    "test:syntax": "parallel-lint --exclude vendor .php-cs-fixer.dist.php rector.php src tests examples",
+    "test:syntax": "parallel-lint --exclude vendor .php-cs-fixer.dist.php rector.php src tests examples tools",
     "test:types": "phpstan analyse --no-progress --memory-limit=1G",
     "test:unit": "phpunit --no-coverage",
     "test": "@qa"
