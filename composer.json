@@ -70,11 +70,18 @@
     "post-update-cmd": "@hooks:install",
     "qa": [
       "@test:composer",
+      "@qa:code"
+    ],
+    "qa:code": [
       "@test:syntax",
       "@test:style",
       "@test:rector",
       "@test:types",
       "@test:unit"
+    ],
+    "qa:lowest": [
+      "@composer validate --strict",
+      "@qa:code"
     ],
     "qa:release": [
       "@qa",

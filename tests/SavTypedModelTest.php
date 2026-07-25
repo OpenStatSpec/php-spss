@@ -149,9 +149,24 @@ class SavTypedModelTest extends TestCase
 
         $variable = new Variable($data);
 
-        foreach ($data as $property => $expected) {
-            self::assertSame($expected, $variable->{$property});
-        }
+        self::assertSame($data['name'], $variable->name);
+        self::assertSame($data['type'], $variable->type);
+        self::assertSame($data['width'], $variable->width);
+        self::assertSame($data['decimals'], $variable->decimals);
+        self::assertSame($data['format'], $variable->format);
+        self::assertSame($data['printFormat'], $variable->printFormat);
+        self::assertSame($data['writeFormat'], $variable->writeFormat);
+        self::assertSame($data['columns'], $variable->columns);
+        self::assertSame($data['alignment'], $variable->alignment);
+        self::assertSame($data['measure'], $variable->measure);
+        self::assertSame($data['role'], $variable->role);
+        self::assertSame($data['label'], $variable->label);
+        self::assertSame($data['values'], $variable->values);
+        self::assertSame($data['valueLabelSet'], $variable->valueLabelSet);
+        self::assertSame($data['missing'], $variable->missing);
+        self::assertSame($data['missingValues'], $variable->missingValues);
+        self::assertSame($data['attributes'], $variable->attributes);
+        self::assertSame($data['data'], $variable->data);
         self::assertSame(Variable::MEASURE_SCALE, $variable->getMeasure());
         self::assertSame(Variable::ALIGN_CENTER, $variable->getAlignment());
         self::assertSame(12, $variable->getColumns());

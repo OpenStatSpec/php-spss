@@ -21,7 +21,7 @@ class Unknown extends Info
             $this->data['raw'] = '';
         }
 
-        $this->dataCount = \strlen($this->data['raw']);
+        $this->dataCount = \strlen((string) $this->data['raw']);
         parent::write($buffer);
         $buffer->writeString($this->data['raw']);
     }

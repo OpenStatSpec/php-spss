@@ -37,8 +37,13 @@ jobs:
         if: matrix.dependencies == 'lowest'
         run: composer update --no-interaction --prefer-dist --prefer-lowest
 
-      - name: Run QA
+      - name: Run locked dependency QA
+        if: matrix.dependencies == 'locked'
         run: composer qa
+
+      - name: Run lowest dependency compatibility QA
+        if: matrix.dependencies == 'lowest'
+        run: composer qa:lowest
 
   quality-gates:
     name: Coverage and mutation gates

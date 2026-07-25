@@ -9,7 +9,7 @@ $files = [
     __DIR__ . '/data.sav',
 ];
 
-function __header($str, $char = '#'): string
+function __header(string $str, $char = '#'): string
 {
     $line = str_repeat((string) $char, 100);
 

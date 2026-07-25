@@ -12,6 +12,8 @@ Composer installs `.githooks/pre-push` as the repository's Git hooks path, so ev
 
 `composer qa` runs dependency validation and auditing, syntax linting, PHP-CS-Fixer, Rector dry-run, PHPStan strict analysis, and the PHPUnit suite.
 
+`composer qa:lowest` runs the same code checks against the lowest dependency versions allowed by `composer.json`. It validates Composer metadata but intentionally omits the vulnerability audit because the compatibility job creates a temporary lock file containing old versions; the committed lock file remains fully audited by `composer qa` in both local and locked CI jobs.
+
 `composer test:coverage` creates `build/coverage/clover.xml` and requires at least 85% executable-line coverage. This is a whole-suite regression gate.
 
 `composer test:coverage:branch` runs three deterministic, memory-bounded Xdebug path-coverage shards, merges them, creates `build/coverage/branches.xml`, and requires at least 74% branch coverage. The shard list is intentionally explicit so that the metric remains reproducible without the excessive memory cost of collecting path coverage for the entire suite in one process. Path coverage is reported for diagnostics but is not a release threshold because the number of possible paths is combinatorial.
