@@ -250,11 +250,15 @@ class Writer
                 $this->info[Record\Info\VeryLongString::SUBTYPE][$shortName] = $var->width;
             }
 
-            $this->info[Record\Info\VariableDisplayParam::SUBTYPE][] = [
+            $displayParameters = [
                 $var->getMeasure(),
                 $var->getColumns(),
                 $var->getAlignment(),
             ];
+            $displayParameterCount = $isString ? Utils::widthToSegments($var->width) : 1;
+            for ($segment = 0; $segment < $displayParameterCount; $segment++) {
+                $this->info[Record\Info\VariableDisplayParam::SUBTYPE][] = $displayParameters;
+            }
 
             // TODO: refactory
             $dataCount = \count($var->data);
