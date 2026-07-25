@@ -23,44 +23,81 @@ final class DeterministicMutationFuzzTest extends TestCase
 
     private const int MAX_VALUE_BYTES = 1_024;
 
-    /** @return iterable<string, array{string, bool}> */
+    private const int LOOP_GUARD_SECONDS = 2;
+
+    /** @return iterable<string, array{bool, int}> */
     public static function mutationProvider(): iterable
     {
         foreach ([false, true] as $zsav) {
             $format = $zsav ? 'zsav' : 'sav';
-            $base = self::createContainer($zsav);
 
             for ($index = 0; $index < self::MUTATIONS_PER_FORMAT; $index++) {
-                yield sprintf('%s mutation %02d', $format, $index) => [
-                    self::mutate($base, $index, $zsav ? 0x5a5a : 0x5a19),
-                    0 === $index % 8,
-                ];
+                yield sprintf('%s mutation %02d', $format, $index) => [$zsav, $index];
             }
         }
     }
 
     #[DataProvider('mutationProvider')]
     public function testMutationHasOnlyBoundedSuccessOrPublicValidationFailure(
-        string $bytes,
-        bool $useIterator,
+        bool $zsav,
+        int $index,
     ): void {
-        self::assertLessThanOrEqual(self::MAX_INPUT_BYTES, strlen($bytes));
-
-        set_error_handler(static function (int $severity, string $message, string $file, int $line): never {
-            throw new \ErrorException($message, 0, $severity, $file, $line);
-        });
+        $previousAsyncSignals = $this->armLoopGuard();
 
         try {
-            if ($useIterator) {
-                $this->assertBoundedIteratorResult($bytes);
-            } else {
-                $this->assertBoundedBulkResult($bytes);
+            $base = $this->createContainer($zsav);
+            $bytes = $this->mutate($base, $index, $zsav ? 0x5a5a : 0x5a19);
+            $useIterator = 0 === $index % 8;
+            self::assertLessThanOrEqual(self::MAX_INPUT_BYTES, strlen($bytes));
+
+            set_error_handler(static function (int $severity, string $message, string $file, int $line): never {
+                throw new \ErrorException($message, 0, $severity, $file, $line);
+            });
+
+            try {
+                if ($useIterator) {
+                    $this->assertBoundedIteratorResult($bytes);
+                } else {
+                    $this->assertBoundedBulkResult($bytes);
+                }
+            } catch (Exception|\InvalidArgumentException|\UnexpectedValueException $exception) {
+                self::assertNotSame('', $exception->getMessage());
+            } finally {
+                restore_error_handler();
             }
-        } catch (Exception|\InvalidArgumentException|\UnexpectedValueException $exception) {
-            self::assertNotSame('', $exception->getMessage());
         } finally {
-            restore_error_handler();
+            $this->disarmLoopGuard($previousAsyncSignals);
         }
+    }
+
+    private function armLoopGuard(): ?bool
+    {
+        if (
+            !function_exists('pcntl_alarm')
+            || !function_exists('pcntl_async_signals')
+            || !function_exists('pcntl_signal')
+        ) {
+            return null;
+        }
+
+        $previousAsyncSignals = pcntl_async_signals(true);
+        pcntl_signal(SIGALRM, static function (): never {
+            throw new \RuntimeException('Mutation loop exceeded its bounded execution guard.');
+        });
+        pcntl_alarm(self::LOOP_GUARD_SECONDS);
+
+        return $previousAsyncSignals;
+    }
+
+    private function disarmLoopGuard(?bool $previousAsyncSignals): void
+    {
+        if (null === $previousAsyncSignals) {
+            return;
+        }
+
+        pcntl_alarm(0);
+        pcntl_signal(SIGALRM, SIG_DFL);
+        pcntl_async_signals($previousAsyncSignals);
     }
 
     private function assertBoundedBulkResult(string $bytes): void
@@ -101,7 +138,7 @@ final class DeterministicMutationFuzzTest extends TestCase
         }
     }
 
-    private static function createContainer(bool $zsav): string
+    private function createContainer(bool $zsav): string
     {
         $writer = new Writer([
             'header' => $zsav
@@ -137,10 +174,10 @@ final class DeterministicMutationFuzzTest extends TestCase
         return $bytes;
     }
 
-    private static function mutate(string $bytes, int $index, int $seed): string
+    private function mutate(string $bytes, int $index, int $seed): string
     {
         $length = strlen($bytes);
-        $state = self::mix($seed, $index);
+        $state = $this->mix($seed, $index);
 
         if ($index < 16) {
             return substr($bytes, 0, 1 + ($state % ($length - 1)));
@@ -175,7 +212,7 @@ final class DeterministicMutationFuzzTest extends TestCase
         return substr_replace($bytes, pack('i', $values[$index % count($values)]), $offset, 4);
     }
 
-    private static function mix(int $seed, int $index): int
+    private function mix(int $seed, int $index): int
     {
         $value = ($seed ^ (($index + 1) * 0x45d9f3b)) & 0x7fffffff;
         $value = (($value ^ ($value >> 16)) * 0x45d9f3b) & 0x7fffffff;
