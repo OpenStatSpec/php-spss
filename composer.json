@@ -29,6 +29,7 @@
   },
   "require-dev": {
     "friendsofphp/php-cs-fixer": "^3.95",
+    "infection/infection": "^0.34",
     "php-parallel-lint/php-parallel-lint": "^1.4",
     "phpstan/phpstan": "^2.2",
     "phpstan/phpstan-phpunit": "^2.0",
@@ -47,7 +48,9 @@
     }
   },
   "config": {
-    "allow-plugins": false,
+    "allow-plugins": {
+      "infection/extension-installer": true
+    },
     "audit": {
       "abandoned": "fail"
     },

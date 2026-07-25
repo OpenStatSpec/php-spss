@@ -1,0 +1,28 @@
+{
+  "$schema": "https://raw.githubusercontent.com/infection/infection/0.34.0/resources/schema.json",
+  "source": {
+    "directories": ["src"]
+  },
+  "timeout": 60,
+  "threads": "max",
+  "testFramework": "phpunit",
+  "phpUnit": {
+    "configDir": "."
+  },
+  "initialTestsPhpOptions": "-d xdebug.mode=coverage",
+  "mutators": {
+    "@default": true
+  },
+  "minCoveredMsi": 75,
+  "timeoutsAsEscaped": true,
+  "maxTimeouts": 0,
+  "dotsPerRow": 80,
+  "logs": {
+    "text": "build/infection/infection.log",
+    "summary": "build/infection/summary.log",
+    "json": "build/infection/infection.json",
+    "html": "build/infection/report.html",
+    "perMutator": "build/infection/per-mutator.md",
+    "summaryJson": "build/infection/summary.json"
+  }
+}
