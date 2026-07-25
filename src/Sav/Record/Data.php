@@ -561,12 +561,16 @@ class Data extends Record
 
     protected function readOpcode(Buffer $buffer): int
     {
-        if ($this->opcodeIndex >= 8) {
-            $this->opcodes     = $buffer->readBytes(8);
-            $this->opcodeIndex = 0;
-        }
+        do {
+            if ($this->opcodeIndex >= 8) {
+                $this->opcodes     = $buffer->readBytes(8);
+                $this->opcodeIndex = 0;
+            }
 
-        return 0xFF & $this->opcodes[$this->opcodeIndex++];
+            $opcode = 0xFF & $this->opcodes[$this->opcodeIndex++];
+        } while (self::OPCODE_NOP === $opcode);
+
+        return $opcode;
     }
 
     protected function writeOpcode(Buffer $buffer, int $opcode): void
@@ -628,8 +632,6 @@ class Data extends Record
                 } else {
                     $opcode = $this->readOpcode($buffer);
                     switch ($opcode) {
-                        case self::OPCODE_NOP:
-                            break;
                         case self::OPCODE_EOF:
                             throw new Exception('Error reading data: unexpected end of compressed data file (cluster code 252)');
                         case self::OPCODE_RAW_DATA:
@@ -650,11 +652,6 @@ class Data extends Record
                 $opcode = self::OPCODE_RAW_DATA;
                 for ($s = 0; $s < $segmentsCount; $s++) {
                     $segWidth = Utils::segmentAllocWidth($width, $s);
-                    if (self::OPCODE_NOP === $opcode) {
-                        // If next segments are empty too, skip
-                        continue;
-                    }
-
                     for ($i = $segWidth; $i > 0; $i -= 8) {
                         $val = '';
                         if (!$compressed) {
@@ -662,8 +659,6 @@ class Data extends Record
                         } else {
                             $opcode = $this->readOpcode($buffer);
                             switch ($opcode) {
-                                case self::OPCODE_NOP:
-                                    break 2;
                                 case self::OPCODE_EOF:
                                     throw new Exception('Error reading data: unexpected end of compressed data file (cluster code 252)');
                                 case self::OPCODE_RAW_DATA:
