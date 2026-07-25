@@ -3,6 +3,7 @@
 namespace SPSS\Sav;
 
 use SPSS\Buffer;
+use SPSS\Exception;
 use SPSS\Sav\Record\Header;
 use SPSS\Sav\Record\Info;
 use SPSS\Sav\Record\ValueLabel;
@@ -80,8 +81,16 @@ class Reader
     {
         $infoCollection = new Record\InfoCollection();
         $posVar         = 0;
-        do {
+        while (true) {
             $recType = $this->_buffer->readInt();
+            if (false === $recType) {
+                throw new Exception('Unexpected end of SPSS metadata before the data record.');
+            }
+
+            if (Record\Data::TYPE === $recType) {
+                break;
+            }
+
             switch ($recType) {
                 case Record\Variable::TYPE:
                     $variable               = Record\Variable::fill($this->_buffer);
@@ -103,8 +112,10 @@ class Reader
                 case Record\Document::TYPE:
                     $this->documents = Record\Document::fill($this->_buffer)->toArray();
                     break;
+                default:
+                    throw new Exception(sprintf('Unsupported SPSS record type %d in the metadata body.', $recType));
             }
-        } while (Record\Data::TYPE !== $recType);
+        }
     }
 
     /**

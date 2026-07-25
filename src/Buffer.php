@@ -82,17 +82,30 @@ class Buffer
      */
     public function allocate(int $length, bool $skip = true): self
     {
+        if ($length < 0) {
+            throw new \InvalidArgumentException('Allocation length cannot be negative.');
+        }
+
         $stream = fopen('php://memory', 'rb+');
         if (false === $stream) {
             throw new Exception('Unable to open allocation stream.');
         }
 
-        if (false === stream_copy_to_stream($this->_stream, $stream, $length)) {
+        $copied = stream_copy_to_stream($this->_stream, $stream, $length);
+        if (false === $copied) {
             throw new Exception('Buffer allocation failed.');
         }
 
         if ($skip) {
-            $this->skip($length);
+            $this->_position += $copied;
+        }
+
+        if ($copied !== $length) {
+            throw new Exception(sprintf(
+                'Buffer allocation requires %d bytes, but only %d bytes are available.',
+                $length,
+                $copied,
+            ));
         }
 
         $buffer = new self($stream);
@@ -151,9 +164,19 @@ class Buffer
 
     public function readString(int $length, int $round = 0, ?string $charset = null): string|false
     {
-        if ($bytes = $this->readBytes($length)) {
-            if ($round !== 0) {
-                $this->skip(Utils::roundUp($length, $round) - $length);
+        if ($length < 0) {
+            throw new \InvalidArgumentException('Read length cannot be negative.');
+        }
+
+        if ($round < 0) {
+            throw new \InvalidArgumentException('Read rounding cannot be negative.');
+        }
+
+        $readLength = 0 === $round ? $length : Utils::roundUp($length, $round);
+        $bytes = $this->readBytes($readLength);
+        if (false !== $bytes) {
+            if ($readLength !== $length) {
+                $bytes = \array_slice($bytes, 0, $length);
             }
 
             $str = Utils::bytesToString($bytes);
@@ -190,9 +213,19 @@ class Buffer
      */
     public function read(?int $length = null): string|false
     {
+        if (null !== $length && $length < 0) {
+            throw new \InvalidArgumentException('Read length cannot be negative.');
+        }
+
         $bytes = stream_get_contents($this->_stream, $length, $this->_position);
-        if (false !== $bytes) {
-            $this->_position += $length ?? 0;
+        if (false === $bytes) {
+            return false;
+        }
+
+        $actualLength = \strlen($bytes);
+        $this->_position += $actualLength;
+        if (null !== $length && $actualLength !== $length) {
+            return false;
         }
 
         return $bytes;
