@@ -52,6 +52,7 @@ final class VeryLongStringWriterTest extends TestCase
 
         $buffer = $writer->getBuffer();
         $buffer->rewind();
+
         $reader = Reader::fromString($buffer->getStream())->read();
 
         self::assertSame(['LONG_' => 700], $reader->info[VeryLongString::SUBTYPE]->toArray());

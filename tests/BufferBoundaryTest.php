@@ -60,8 +60,8 @@ final class BufferBoundaryTest extends TestCase
         try {
             $buffer->read(-1);
             self::fail('A negative read length must be rejected.');
-        } catch (\InvalidArgumentException $exception) {
-            self::assertSame('Read length cannot be negative.', $exception->getMessage());
+        } catch (\InvalidArgumentException $invalidArgumentException) {
+            self::assertSame('Read length cannot be negative.', $invalidArgumentException->getMessage());
         }
 
         self::assertSame(0, $buffer->position());

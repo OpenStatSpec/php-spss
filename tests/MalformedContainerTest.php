@@ -35,6 +35,7 @@ final class MalformedContainerTest extends TestCase
         $body = Buffer::factory('', ['memory' => true]);
         $body->writeInt(42);
         $body->rewind();
+
         $bytes = $body->read();
         self::assertIsString($bytes);
 
@@ -50,6 +51,7 @@ final class MalformedContainerTest extends TestCase
         new Header()->write($buffer);
         $buffer->write($body);
         $buffer->rewind();
+
         $bytes = $buffer->read();
         self::assertIsString($bytes);
 
