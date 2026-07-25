@@ -58,6 +58,113 @@ class SavTypedModelTest extends TestCase
         new VariableFormat(code: 256, width: 8);
     }
 
+    public function testLegacyVariableFormatCatalogAndClassifiers(): void
+    {
+        $formats = [
+            0 => '',
+            Variable::FORMAT_TYPE_A => 'A',
+            Variable::FORMAT_TYPE_AHEX => 'AHEX',
+            Variable::FORMAT_TYPE_COMMA => 'COMMA',
+            Variable::FORMAT_TYPE_DOLLAR => 'DOLLAR',
+            Variable::FORMAT_TYPE_F => 'F',
+            Variable::FORMAT_TYPE_IB => 'IB',
+            Variable::FORMAT_TYPE_PIBHEX => 'PIBHEX',
+            Variable::FORMAT_TYPE_P => 'P',
+            Variable::FORMAT_TYPE_PIB => 'PIB',
+            Variable::FORMAT_TYPE_PK => 'PK',
+            Variable::FORMAT_TYPE_RB => 'RB',
+            Variable::FORMAT_TYPE_RBHEX => 'RBHEX',
+            Variable::FORMAT_TYPE_Z => 'Z',
+            Variable::FORMAT_TYPE_N => 'N',
+            Variable::FORMAT_TYPE_E => 'E',
+            Variable::FORMAT_TYPE_DATE => 'DATE',
+            Variable::FORMAT_TYPE_TIME => 'TIME',
+            Variable::FORMAT_TYPE_DATETIME => 'DATETIME',
+            Variable::FORMAT_TYPE_ADATE => 'ADATE',
+            Variable::FORMAT_TYPE_JDATE => 'JDATE',
+            Variable::FORMAT_TYPE_DTIME => 'DTIME',
+            Variable::FORMAT_TYPE_WKDAY => 'WKDAY',
+            Variable::FORMAT_TYPE_MONTH => 'MONTH',
+            Variable::FORMAT_TYPE_MOYR => 'MOYR',
+            Variable::FORMAT_TYPE_QYR => 'QYR',
+            Variable::FORMAT_TYPE_WKYR => 'WKYR',
+            Variable::FORMAT_TYPE_PCT => 'PCT',
+            Variable::FORMAT_TYPE_DOT => 'DOT',
+            Variable::FORMAT_TYPE_CCA => 'CCA',
+            Variable::FORMAT_TYPE_CCB => 'CCB',
+            Variable::FORMAT_TYPE_CCC => 'CCC',
+            Variable::FORMAT_TYPE_CCD => 'CCD',
+            Variable::FORMAT_TYPE_CCE => 'CCE',
+            Variable::FORMAT_TYPE_EDATE => 'EDATE',
+            Variable::FORMAT_TYPE_SDATE => 'SDATE',
+        ];
+
+        foreach ($formats as $code => $abbreviation) {
+            [$actualAbbreviation, $meaning] = Variable::getFormatInfo($code);
+            self::assertSame($abbreviation, $actualAbbreviation);
+            self::assertNotNull($meaning);
+        }
+
+        self::assertSame([null, null], Variable::getFormatInfo(255));
+        self::assertFalse(Variable::isNumberFormat(0));
+        self::assertFalse(Variable::isNumberFormat(Variable::FORMAT_TYPE_A));
+        self::assertFalse(Variable::isNumberFormat(Variable::FORMAT_TYPE_AHEX));
+        self::assertTrue(Variable::isNumberFormat(Variable::FORMAT_TYPE_F));
+        self::assertTrue(Variable::isStringFormat(Variable::FORMAT_TYPE_A));
+        self::assertTrue(Variable::isStringFormat(Variable::FORMAT_TYPE_AHEX));
+        self::assertFalse(Variable::isStringFormat(Variable::FORMAT_TYPE_F));
+        self::assertSame('Left', Variable::alignmentToString(Variable::ALIGN_LEFT));
+        self::assertSame('Right', Variable::alignmentToString(Variable::ALIGN_RIGHT));
+        self::assertSame('Center', Variable::alignmentToString(Variable::ALIGN_CENTER));
+        self::assertSame('Invalid', Variable::alignmentToString(99));
+    }
+
+    public function testLegacyVariableConstructorAndDerivedDisplayDefaults(): void
+    {
+        $printFormat = new VariableFormat(Variable::FORMAT_TYPE_F, 12, 2);
+        $writeFormat = new VariableFormat(Variable::FORMAT_TYPE_E, 14, 4);
+        $valueLabelSet = new ValueLabelSet([new ValueLabel(1, 'Yes')], ['score']);
+        $missingValues = MissingValues::discrete(-99);
+        $data = [
+            'name' => 'score',
+            'type' => VariableType::NUMERIC,
+            'width' => 0,
+            'decimals' => 2,
+            'format' => Variable::FORMAT_TYPE_F,
+            'printFormat' => $printFormat,
+            'writeFormat' => $writeFormat,
+            'columns' => 12,
+            'alignment' => Variable::ALIGN_CENTER,
+            'measure' => Variable::MEASURE_SCALE,
+            'role' => Variable::ROLE_TARGET,
+            'label' => 'Score',
+            'values' => [1 => 'Yes'],
+            'valueLabelSet' => $valueLabelSet,
+            'missing' => [-99],
+            'missingValues' => $missingValues,
+            'attributes' => ['source' => ['survey']],
+            'data' => [1, null],
+        ];
+
+        $variable = new Variable($data);
+
+        foreach ($data as $property => $expected) {
+            self::assertSame($expected, $variable->{$property});
+        }
+        self::assertSame(Variable::MEASURE_SCALE, $variable->getMeasure());
+        self::assertSame(Variable::ALIGN_CENTER, $variable->getAlignment());
+        self::assertSame(12, $variable->getColumns());
+
+        $numericDefaults = new Variable(['width' => 0]);
+        self::assertSame(Variable::MEASURE_UNKNOWN, $numericDefaults->getMeasure());
+        self::assertSame(Variable::ALIGN_RIGHT, $numericDefaults->getAlignment());
+        self::assertSame(8, $numericDefaults->getColumns());
+
+        $stringDefaults = new Variable(['width' => 8]);
+        self::assertSame(Variable::MEASURE_NOMINAL, $stringDefaults->getMeasure());
+        self::assertSame(Variable::ALIGN_LEFT, $stringDefaults->getAlignment());
+    }
+
     public function testValueLabelSetPreservesOrderValueTypesAndDuplicates(): void
     {
         $first = new ValueLabel(1.5, 'first');

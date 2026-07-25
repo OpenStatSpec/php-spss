@@ -28,6 +28,19 @@ class InfoAttributeRecordsTest extends TestCase
         self::assertSame($expected, $this->roundTrip($record)->toArray());
     }
 
+    public function testDataFileAttributesMergeRepeatedNamesWhileDecoding(): void
+    {
+        $payload = "source('first'\n)source('second'\n'third'\n)";
+        $buffer = Buffer::factory('', ['memory' => true]);
+        $buffer->writeInt(1);
+        $buffer->writeInt(strlen($payload));
+        $buffer->write($payload);
+        $buffer->rewind();
+
+        $record = DataFileAttributes::fill($buffer);
+        self::assertSame(['source' => ['first', 'second', 'third']], $record->toArray());
+    }
+
     public function testVariableAttributesRoundTripSupportsMultipleVariablesAndValueDelimiters(): void
     {
         $expected = [
@@ -143,17 +156,35 @@ class InfoAttributeRecordsTest extends TestCase
     public static function malformedRecordProvider(): iterable
     {
         yield 'data file attributes require size one' => [17, 2, "a('x'\n)", 'declared payload is 14 bytes'];
+        yield 'data file attributes cannot be empty' => [17, 1, '', 'byte count must be positive'];
+        yield 'attribute requires opening parenthesis' => [17, 1, 'attribute', 'not followed by an opening parenthesis'];
+        yield 'attribute name rejects whitespace' => [17, 1, "bad name('x'\n)", 'attribute name must be non-empty'];
         yield 'attribute requires a value' => [17, 1, 'a()', 'must contain at least one single-quoted value'];
+        yield 'attribute value requires opening quote' => [17, 1, "a(x'\n)", 'at least one single-quoted value'];
         yield 'attribute value requires line feed' => [17, 1, "a('x')", 'not terminated by a quote and line feed'];
+        yield 'attribute value requires quote before line feed' => [17, 1, "a('x\n)", 'must end with a single quote'];
+        yield 'attribute requires closing parenthesis' => [17, 1, "a('x'\n", 'not followed by a closing parenthesis'];
         yield 'variable name requires colon' => [18, 1, "longName('x'\n)", 'variable name is not followed by a colon'];
         yield 'variable set cannot trail slash' => [18, 1, "longName:a('x'\n)/", 'cannot end with a variable-set delimiter'];
     }
 
-    public function testWriterRejectsEmptyAttributeArrays(): void
+    /** @return iterable<string, array{array<string, list<string>>, string}> */
+    public static function invalidDataFileAttributesProvider(): iterable
     {
-        $record = new DataFileAttributes(['data' => ['empty' => []]]);
+        yield 'empty set' => [[], 'at least one attribute'];
+        yield 'empty attribute name' => [['' => ['value']], 'must be non-empty'];
+        yield 'attribute name delimiter' => [['bad/name' => ['value']], 'cannot contain whitespace'];
+        yield 'empty values' => [['empty' => []], 'must contain at least one value'];
+        yield 'line feed in value' => [['note' => ["first\nsecond"]], 'cannot contain line feeds'];
+    }
+
+    /** @param array<string, list<string>> $data */
+    #[DataProvider('invalidDataFileAttributesProvider')]
+    public function testWriterRejectsMalformedAttributeSets(array $data, string $message): void
+    {
+        $record = new DataFileAttributes(['data' => $data]);
         $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('must contain at least one value');
+        $this->expectExceptionMessage($message);
         $record->write(Buffer::factory('', ['memory' => true]));
     }
 

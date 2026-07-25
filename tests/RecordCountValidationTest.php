@@ -8,11 +8,72 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use SPSS\Buffer;
 use SPSS\Exception;
 use SPSS\Sav\Record\Document;
+use SPSS\Sav\Record\Info\Unknown;
 use SPSS\Sav\Record\InfoCollection;
 use SPSS\Sav\Record\ValueLabel;
 
 final class RecordCountValidationTest extends TestCase
 {
+    public function testDocumentArrayAccessRoundTripsLines(): void
+    {
+        $document = new Document();
+        $document->append([' first line ', 42]);
+        $document[] = 'third line';
+        $document['temporary'] = 'remove me';
+
+        self::assertTrue(isset($document[0]));
+        self::assertSame(' first line ', $document[0]);
+        self::assertSame('remove me', $document['temporary']);
+
+        unset($document['temporary']);
+        self::assertFalse(isset($document['temporary']));
+
+        $buffer = Buffer::factory('', ['memory' => true]);
+        $document->write($buffer);
+        $buffer->rewind();
+
+        self::assertSame(Document::TYPE, $buffer->readInt());
+        $parsed = Document::fill($buffer);
+        self::assertSame(['first line', '42', 'third line'], $parsed->toArray());
+    }
+
+    public function testUnknownInfoRecordPreservesOpaquePayload(): void
+    {
+        $payload = "\x00opaque\xff";
+        $buffer = Buffer::factory('', ['memory' => true]);
+        $buffer->writeInt(9_999);
+        $buffer->writeInt(1);
+        $buffer->writeInt(strlen($payload));
+        $buffer->write($payload);
+        $buffer->rewind();
+
+        $collection = new InfoCollection();
+        $record = $collection->fill($buffer)[9_999];
+
+        self::assertInstanceOf(Unknown::class, $record);
+        self::assertSame(['raw' => $payload], $record->toArray());
+        self::assertSame([$record], $collection->records);
+    }
+
+    public function testUnknownInfoRecordWritesExplicitAndDefaultPayloads(): void
+    {
+        $record = new Unknown(['data' => ['raw' => 'opaque']]);
+        $buffer = Buffer::factory('', ['memory' => true]);
+        $record->write($buffer);
+        $buffer->rewind();
+
+        self::assertSame(7, $buffer->readInt());
+        self::assertSame(Unknown::SUBTYPE, $buffer->readInt());
+        self::assertSame(1, $buffer->readInt());
+        self::assertSame(6, $buffer->readInt());
+        self::assertSame('opaque', $buffer->read(6));
+
+        $empty = new Unknown();
+        $emptyBuffer = Buffer::factory('', ['memory' => true]);
+        $empty->write($emptyBuffer);
+        self::assertSame(['raw' => ''], $empty->toArray());
+    }
+
     #[DataProvider('invalidDocumentCounts')]
     public function testInvalidDocumentCountsAreRejected(int $count, string $message): void
     {
