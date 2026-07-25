@@ -3,6 +3,7 @@
 namespace SPSS\Sav\Record\Info;
 
 use SPSS\Buffer;
+use SPSS\Exception;
 use SPSS\Sav\Record\Info;
 
 class LongVariableNames extends Info
@@ -23,8 +24,12 @@ class LongVariableNames extends Info
         $data = rtrim($buffer->readString($this->dataSize * $this->dataCount));
 
         foreach (explode(self::DELIMITER, $data) as $item) {
-            [$key, $value] = explode('=', $item);
-            $this->data[$key] = trim($value);
+            $parts = explode('=', $item, 2);
+            if (2 !== count($parts) || '' === $parts[0]) {
+                throw new Exception('Invalid long variable names record: expected a name=value entry.');
+            }
+
+            $this->data[$parts[0]] = trim($parts[1]);
         }
     }
 

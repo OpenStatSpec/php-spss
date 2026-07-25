@@ -92,7 +92,6 @@ class Data extends Record
 
         $compressed = 0 !== $buffer->context->header->compression;
         $bias       = $buffer->context->header->bias;
-        $casesCount = $buffer->context->header->casesCount;
 
         /** @var list<Variable> $variables */
         $variables = $buffer->context->variables;
@@ -159,7 +158,6 @@ class Data extends Record
 
         $compressed = $buffer->context->header->compression;
         $bias       = $buffer->context->header->bias;
-        $casesCount = $buffer->context->header->casesCount;
 
         /** @var Variable[] $variables */
         $variables = $buffer->context->variables;
