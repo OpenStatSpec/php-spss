@@ -17,6 +17,7 @@ use SPSS\Sav\MultipleResponseLabelSource;
 use SPSS\Sav\MultipleResponseSet;
 use SPSS\Sav\MultipleResponseSetType;
 use SPSS\Sav\Reader;
+use SPSS\Sav\Record\Header;
 use SPSS\Sav\ValueLabel;
 use SPSS\Sav\ValueLabelSet;
 use SPSS\Sav\Variable;
@@ -165,5 +166,68 @@ class DatasetRoundTripTest extends TestCase
         $this->assertSame(999.0, $actualWeight->missingValues->additionalValue);
         $this->assertSame(VariableRole::TARGET, $actualComment->role);
         $this->assertSame(['NA'], $actualComment->missingValues->discreteValues());
+    }
+
+    public function testTypedZsavRoundTripPreservesCompressionBoundariesAndMetadataDefaults(): void
+    {
+        $format = new VariableFormat(Variable::FORMAT_TYPE_F, 8);
+        $createdAt = new \DateTimeImmutable('2026-07-25 13:14:15 UTC');
+        $source = new Dataset(
+            dictionary: new VariableDictionary([
+                new VariableMetadata(
+                    name: 'boundary',
+                    type: VariableType::NUMERIC,
+                    width: 0,
+                    printFormat: $format,
+                    writeFormat: $format,
+                    dictionaryIndex: 1,
+                ),
+            ]),
+            rows: [
+                [-100],
+                [-99],
+                [0],
+                [151],
+                [152],
+                [1.5],
+                [null],
+            ],
+            metadata: new FileMetadata(
+                label: 'ZSAV opcode boundaries',
+                createdAt: $createdAt,
+            ),
+            technicalMetadata: new FileTechnicalMetadata(
+                sourceFormat: 'ZSAV',
+                sourceVersion: '29.1.2',
+                encoding: 'UTF-8',
+                machineCode: 2,
+                floatingPointRepresentation: 1,
+                endianness: 2,
+            ),
+        );
+
+        $writer = new Writer($source);
+        $buffer = $writer->getBuffer();
+        $buffer->rewind();
+
+        $actual = Reader::fromString($buffer->getStream())->readDataset();
+
+        self::assertSame('zsav', $actual->technicalMetadata->sourceFormat);
+        self::assertSame(Header::ZLIB_REC_TYPE, $actual->technicalMetadata->recordType);
+        self::assertSame(2, $actual->technicalMetadata->compression);
+        self::assertSame('29.1.2', $actual->technicalMetadata->sourceVersion);
+        self::assertSame(2, $actual->technicalMetadata->machineCode);
+        self::assertSame(1, $actual->technicalMetadata->floatingPointRepresentation);
+        self::assertSame(2, $actual->technicalMetadata->endianness);
+        self::assertSame($createdAt->format('Y-m-d H:i:s'), $actual->metadata->createdAt?->format('Y-m-d H:i:s'));
+        self::assertSame([
+            [-100.0],
+            [-99.0],
+            [0.0],
+            [151.0],
+            [152.0],
+            [1.5],
+            [null],
+        ], $actual->rows());
     }
 }

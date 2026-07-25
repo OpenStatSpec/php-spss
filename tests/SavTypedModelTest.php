@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SPSS\Tests;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use SPSS\Sav\Alignment;
 use SPSS\Sav\Dataset;
 use SPSS\Sav\FileAttribute;
@@ -366,6 +367,299 @@ class SavTypedModelTest extends TestCase
             printFormat: $format,
             writeFormat: $format,
         );
+    }
+
+    public function testVariableFormatAcceptsPackedByteBoundariesAndDefaultDecimals(): void
+    {
+        $minimum = new VariableFormat(0, 0);
+        $maximum = new VariableFormat(255, 255, 255);
+
+        self::assertSame(0, $minimum->code);
+        self::assertSame(0, $minimum->width);
+        self::assertSame(0, $minimum->decimals);
+        self::assertSame(255, $maximum->code);
+        self::assertSame(255, $maximum->width);
+        self::assertSame(255, $maximum->decimals);
+    }
+
+    public function testVariableMetadataAcceptsOpenStatSpecBoundaries(): void
+    {
+        $format = new VariableFormat(Variable::FORMAT_TYPE_A, 8);
+        $minimum = new VariableMetadata(
+            name: 'minimum',
+            type: VariableType::STRING,
+            width: 1,
+            printFormat: $format,
+            writeFormat: $format,
+            columns: 0,
+            dictionaryIndex: 1,
+        );
+        $maximum = new VariableMetadata(
+            name: 'maximum',
+            type: VariableType::STRING,
+            width: 32_767,
+            printFormat: $format,
+            writeFormat: $format,
+            dictionaryIndex: 2,
+        );
+
+        self::assertSame(1, $minimum->width);
+        self::assertSame(0, $minimum->columns);
+        self::assertSame(32_767, $maximum->width);
+        self::assertSame(8, $maximum->columns);
+    }
+
+    /** @return iterable<string, array{string, VariableType, int, string|null, int, int|null, string}> */
+    public static function invalidVariableMetadataProvider(): iterable
+    {
+        yield 'whitespace name' => [' ', VariableType::NUMERIC, 0, null, 8, null, 'name cannot be empty'];
+        yield 'whitespace short name' => ['name', VariableType::NUMERIC, 0, ' ', 8, null, 'short variable name'];
+        yield 'numeric storage width' => ['name', VariableType::NUMERIC, 1, null, 8, null, 'storage width 0'];
+        yield 'zero string width' => ['name', VariableType::STRING, 0, null, 8, null, 'between 1 and 32767'];
+        yield 'string width above maximum' => ['name', VariableType::STRING, 32_768, null, 8, null, 'between 1 and 32767'];
+        yield 'negative display columns' => ['name', VariableType::NUMERIC, 0, null, -1, null, 'cannot be negative'];
+        yield 'zero dictionary index' => ['name', VariableType::NUMERIC, 0, null, 8, 0, 'must be 1-based'];
+    }
+
+    #[DataProvider('invalidVariableMetadataProvider')]
+    public function testVariableMetadataRejectsInvalidOpenStatSpecValues(
+        string $name,
+        VariableType $type,
+        int $width,
+        ?string $shortName,
+        int $columns,
+        ?int $dictionaryIndex,
+        string $message,
+    ): void {
+        $format = new VariableFormat(
+            VariableType::STRING === $type ? Variable::FORMAT_TYPE_A : Variable::FORMAT_TYPE_F,
+            8,
+        );
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage($message);
+        new VariableMetadata(
+            name: $name,
+            type: $type,
+            width: $width,
+            printFormat: $format,
+            writeFormat: $format,
+            shortName: $shortName,
+            columns: $columns,
+            dictionaryIndex: $dictionaryIndex,
+        );
+    }
+
+    public function testTechnicalMetadataAcceptsZeroCountsAndWireCodeBoundaries(): void
+    {
+        $uncompressed = new FileTechnicalMetadata(
+            caseCount: 0,
+            nominalCaseSize: 0,
+            compression: 0,
+            endianness: 1,
+        );
+        $compressed = new FileTechnicalMetadata(compression: 1, endianness: 2);
+        $zsav = new FileTechnicalMetadata(compression: 2);
+
+        self::assertSame(0, $uncompressed->caseCount);
+        self::assertSame(0, $uncompressed->nominalCaseSize);
+        self::assertSame(0, $uncompressed->compression);
+        self::assertSame(1, $uncompressed->endianness);
+        self::assertSame(1, $compressed->compression);
+        self::assertSame(2, $compressed->endianness);
+        self::assertSame(2, $zsav->compression);
+    }
+
+    /** @return iterable<string, array{string, int|string, string}> */
+    public static function invalidTechnicalMetadataProvider(): iterable
+    {
+        yield 'source format whitespace' => ['sourceFormat', ' ', 'Source format'];
+        yield 'record type whitespace' => ['recordType', ' ', 'Record type'];
+        yield 'source version whitespace' => ['sourceVersion', ' ', 'Source version'];
+        yield 'provenance whitespace' => ['provenance', ' ', 'Provenance'];
+        yield 'encoding whitespace' => ['encoding', ' ', 'encoding'];
+        yield 'negative case count' => ['caseCount', -1, 'Case count'];
+        yield 'negative nominal size' => ['nominalCaseSize', -1, 'Nominal case size'];
+        yield 'compression below range' => ['compression', -1, 'Compression'];
+        yield 'compression above range' => ['compression', 3, 'Compression'];
+        yield 'endianness below range' => ['endianness', 0, 'Endianness'];
+        yield 'endianness above range' => ['endianness', 3, 'Endianness'];
+    }
+
+    #[DataProvider('invalidTechnicalMetadataProvider')]
+    public function testTechnicalMetadataRejectsInvalidWireValues(
+        string $field,
+        int|string $value,
+        string $message,
+    ): void {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage($message);
+
+        match ($field) {
+            'sourceFormat' => new FileTechnicalMetadata(sourceFormat: (string) $value),
+            'recordType' => new FileTechnicalMetadata(recordType: (string) $value),
+            'sourceVersion' => new FileTechnicalMetadata(sourceVersion: (string) $value),
+            'provenance' => new FileTechnicalMetadata(provenance: (string) $value),
+            'encoding' => new FileTechnicalMetadata(encoding: (string) $value),
+            'caseCount' => new FileTechnicalMetadata(caseCount: (int) $value),
+            'nominalCaseSize' => new FileTechnicalMetadata(nominalCaseSize: (int) $value),
+            'compression' => new FileTechnicalMetadata(compression: (int) $value),
+            'endianness' => new FileTechnicalMetadata(endianness: (int) $value),
+            default => throw new \LogicException('Unknown fixture field.'),
+        };
+    }
+
+    /** @return iterable<string, array{string, string}> */
+    public static function invalidFileMetadataProvider(): iterable
+    {
+        yield 'whitespace weight variable' => ['weight', 'weight variable'];
+        yield 'documents must be a list' => ['documents-list', 'documents must be a list'];
+        yield 'documents validate members' => ['documents-type', 'documents contain an invalid value'];
+        yield 'attributes validate members' => ['attributes-type', 'attributes contain an invalid value'];
+        yield 'variable sets validate members' => ['sets-type', 'variable sets contain an invalid value'];
+        yield 'response sets validate members' => ['responses-type', 'multiple-response sets contain an invalid value'];
+    }
+
+    #[DataProvider('invalidFileMetadataProvider')]
+    public function testFileMetadataRejectsInvalidCollections(string $fixture, string $message): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage($message);
+
+        match ($fixture) {
+            'weight' => new FileMetadata(weightVariableName: ' '),
+            // @phpstan-ignore argument.type
+            'documents-list' => new FileMetadata(documents: ['key' => 'value']),
+            // @phpstan-ignore argument.type
+            'documents-type' => new FileMetadata(documents: [1]),
+            // @phpstan-ignore argument.type
+            'attributes-type' => new FileMetadata(attributes: ['invalid']),
+            // @phpstan-ignore argument.type
+            'sets-type' => new FileMetadata(variableSets: ['invalid']),
+            // @phpstan-ignore argument.type
+            'responses-type' => new FileMetadata(multipleResponseSets: ['invalid']),
+            default => throw new \LogicException('Unknown file metadata fixture.'),
+        };
+    }
+
+    public function testMissingValuesAcceptCardinalityAndClosedRangeBoundaries(): void
+    {
+        self::assertSame([1], MissingValues::discrete(1)->discreteValues());
+        self::assertSame([1, 2, 3], MissingValues::discrete(1, 2, 3)->discreteValues());
+
+        $closedRange = MissingValues::range(5, 5);
+        self::assertSame(5, $closedRange->lower);
+        self::assertSame(5, $closedRange->upper);
+    }
+
+    /** @return iterable<string, array{string, string}> */
+    public static function invalidMissingValuesProvider(): iterable
+    {
+        yield 'empty discrete set' => ['empty', 'between one and three'];
+        yield 'four discrete values' => ['four', 'between one and three'];
+        yield 'NaN discrete value' => ['discrete-nan', 'must be finite'];
+        yield 'infinite lower range' => ['range-lower', 'must be finite'];
+        yield 'infinite upper range' => ['range-upper', 'must be finite'];
+        yield 'infinite additional value' => ['additional', 'must be finite'];
+    }
+
+    #[DataProvider('invalidMissingValuesProvider')]
+    public function testMissingValuesRejectInvalidCardinalityAndNonFiniteValues(
+        string $fixture,
+        string $message,
+    ): void {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage($message);
+
+        match ($fixture) {
+            'empty' => MissingValues::discrete(),
+            'four' => MissingValues::discrete(1, 2, 3, 4),
+            'discrete-nan' => MissingValues::discrete(NAN),
+            'range-lower' => MissingValues::range(-INF, 1),
+            'range-upper' => MissingValues::range(1, INF),
+            'additional' => MissingValues::rangeAndValue(1, 2, NAN),
+            default => throw new \LogicException('Unknown missing-values fixture.'),
+        };
+    }
+
+    /** @return iterable<string, array{string, string}> */
+    public static function invalidMultipleResponseSetProvider(): iterable
+    {
+        yield 'bare dollar name' => ['name-dollar', 'must begin with'];
+        yield 'missing dollar prefix' => ['name-prefix', 'must begin with'];
+        yield 'whitespace member' => ['member', 'member name'];
+        yield 'null dichotomy value' => ['null-counted', 'requires a counted value'];
+        yield 'empty dichotomy value' => ['empty-counted', 'requires a counted value'];
+        yield 'category counted labels' => ['category-labels', 'cannot use counted-value'];
+        yield 'variable label source mismatch' => ['label-source', 'only valid with counted-value'];
+    }
+
+    #[DataProvider('invalidMultipleResponseSetProvider')]
+    public function testMultipleResponseSetRejectsInvalidApiCombinations(string $fixture, string $message): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage($message);
+
+        match ($fixture) {
+            'name-dollar' => new MultipleResponseSet('$', MultipleResponseSetType::CATEGORY, []),
+            'name-prefix' => new MultipleResponseSet('set', MultipleResponseSetType::CATEGORY, []),
+            'member' => new MultipleResponseSet('$set', MultipleResponseSetType::CATEGORY, [' ']),
+            'null-counted' => new MultipleResponseSet('$set', MultipleResponseSetType::DICHOTOMY, ['v']),
+            'empty-counted' => new MultipleResponseSet('$set', MultipleResponseSetType::DICHOTOMY, ['v'], countedValue: ''),
+            'category-labels' => new MultipleResponseSet(
+                '$set',
+                MultipleResponseSetType::CATEGORY,
+                ['v'],
+                categoryLabels: MultipleResponseCategoryLabels::COUNTED_VALUES,
+            ),
+            'label-source' => new MultipleResponseSet(
+                '$set',
+                MultipleResponseSetType::DICHOTOMY,
+                ['v'],
+                countedValue: 1,
+                labelSource: MultipleResponseLabelSource::VARIABLE_LABEL,
+            ),
+            default => throw new \LogicException('Unknown multiple-response fixture.'),
+        };
+    }
+
+    /** @return iterable<string, array{string, string}> */
+    public static function whitespaceNameProvider(): iterable
+    {
+        yield 'file attribute' => ['file-attribute', 'file attribute name'];
+        yield 'variable attribute owner' => ['attribute-owner', 'variable name'];
+        yield 'variable attribute name' => ['attribute-name', 'attribute name'];
+        yield 'variable set name' => ['set-name', 'set name'];
+        yield 'variable set member' => ['set-member', 'member name'];
+        yield 'value label variable' => ['label-variable', 'variable name'];
+    }
+
+    #[DataProvider('whitespaceNameProvider')]
+    public function testTypedCollectionsRejectWhitespaceOnlyNames(string $fixture, string $message): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage($message);
+
+        match ($fixture) {
+            'file-attribute' => new FileAttribute(' ', ['value']),
+            'attribute-owner' => new VariableAttribute(' ', 'attribute', ['value']),
+            'attribute-name' => new VariableAttribute('variable', ' ', ['value']),
+            'set-name' => new VariableSet(' '),
+            'set-member' => new VariableSet('set', [' ']),
+            'label-variable' => new ValueLabelSet([], [' ']),
+            default => throw new \LogicException('Unknown whitespace fixture.'),
+        };
+    }
+
+    public function testDictionaryRejectsUnicodeCaseFoldedDuplicates(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Duplicate dictionary variable name');
+
+        new VariableDictionary([
+            $this->numericVariable("\u{00D5}IGE"),
+            $this->numericVariable("\u{00F5}ige"),
+        ]);
     }
 
     private function numericVariable(string $name, ?string $shortName = null): VariableMetadata
