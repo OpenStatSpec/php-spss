@@ -1,6 +1,6 @@
 # Changelog
 
-## 3.0.0 (unreleased)
+## 3.0.0 (2026-07-26)
 
 - Raised the minimum PHP version to 8.4.1.
 - Upgraded the test suite from PHPUnit 7 to PHPUnit 13.
