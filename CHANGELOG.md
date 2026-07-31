@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.0.2 (2026-07-31)
+
+- Moved active maintenance to the independent `OpenStatSpec/php-spss` repository.
+- Renamed the Composer package from `tiamo/spss` to `openstatspec/spss-sav`, while keeping the stable `SPSS\` PHP namespace.
+- Preserved the original author attribution and added Composer replacement metadata for migration compatibility.
+
 ## 3.0.1 (2026-07-31)
 
 - Made fixed-width strings byte-safe in the target file encoding, with complete-character truncation, correct declared lengths, and space padding for variable and value labels.

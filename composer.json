@@ -1,6 +1,8 @@
 {
-  "name": "tiamo/spss",
-  "description": "SPSS is a php-based implementation of IBM SPSS Statistics Standard",
+  "name": "openstatspec/spss-sav",
+  "description": "PHP reader and writer for IBM SPSS Statistics SAV and ZSAV files",
+  "type": "library",
+  "homepage": "https://github.com/OpenStatSpec/php-spss",
   "keywords": [
     "SPSS",
     "IBM",
@@ -18,9 +20,19 @@
   "authors": [
     {
       "name": "Korniienko Vladyslav",
-      "email": "vk.tiamo@gmail.com"
+      "email": "vk.tiamo@gmail.com",
+      "role": "Original author"
+    },
+    {
+      "name": "OpenStatSpec contributors",
+      "homepage": "https://github.com/OpenStatSpec",
+      "role": "Maintainer"
     }
   ],
+  "support": {
+    "issues": "https://github.com/OpenStatSpec/php-spss/issues",
+    "source": "https://github.com/OpenStatSpec/php-spss"
+  },
   "require": {
     "php": "^8.4.1",
     "ext-bcmath": "*",
@@ -36,6 +48,9 @@
     "phpstan/phpstan-strict-rules": "^2.0",
     "phpunit/phpunit": "^13.2",
     "rector/rector": "^2.5"
+  },
+  "replace": {
+    "tiamo/spss": "self.version"
   },
   "autoload": {
     "psr-4": {

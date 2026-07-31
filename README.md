@@ -1,11 +1,13 @@
-# SPSS / PSPP
+# SPSS SAV/ZSAV for PHP
 
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/tiamo/spss.svg?style=flat-square)](https://packagist.org/packages/tiamo/spss)
-[![QA](https://github.com/tiamo/spss/actions/workflows/qa.yml/badge.svg)](https://github.com/tiamo/spss/actions/workflows/qa.yml)
-[![Total Downloads](https://img.shields.io/packagist/dt/tiamo/spss.svg?style=flat-square)](https://packagist.org/packages/tiamo/spss)
-[![License](https://poser.pugx.org/tiamo/spss/license)](https://packagist.org/packages/tiamo/spss)
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/openstatspec/spss-sav.svg?style=flat-square)](https://packagist.org/packages/openstatspec/spss-sav)
+[![QA](https://github.com/OpenStatSpec/php-spss/actions/workflows/qa.yml/badge.svg)](https://github.com/OpenStatSpec/php-spss/actions/workflows/qa.yml)
+[![Total Downloads](https://img.shields.io/packagist/dt/openstatspec/spss-sav.svg?style=flat-square)](https://packagist.org/packages/openstatspec/spss-sav)
+[![License](https://poser.pugx.org/openstatspec/spss-sav/license)](https://packagist.org/packages/openstatspec/spss-sav)
 
 A PHP library for reading and writing SPSS / PSPP SAV and ZSAV data files.
+
+Maintained by [OpenStatSpec](https://github.com/OpenStatSpec). This project continues the MIT-licensed [`tiamo/spss`](https://github.com/tiamo/spss) codebase created by Vladyslav Korniienko. The stable PHP namespace remains `SPSS\` for compatibility.
 
 ## Requirements
 
@@ -17,7 +19,7 @@ A PHP library for reading and writing SPSS / PSPP SAV and ZSAV data files.
 ## Installation
 
 ```bash
-composer require tiamo/spss
+composer require openstatspec/spss-sav
 ```
 
 ## Usage
