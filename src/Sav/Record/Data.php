@@ -246,6 +246,8 @@ class Data extends Record
 
             if ($compressed) {
                 $this->dataBuffer = Buffer::factory('', ['memory' => true]);
+                $this->dataBuffer->charset = $buffer->charset;
+                $this->dataBuffer->isBigEndian = $buffer->isBigEndian;
             }
         }
 
@@ -304,6 +306,8 @@ class Data extends Record
 
         if ($compressed) {
             $this->dataBuffer = Buffer::factory('', ['memory' => true]);
+            $this->dataBuffer->charset = $outputBuffer->charset;
+            $this->dataBuffer->isBigEndian = $outputBuffer->isBigEndian;
         }
 
         if (\count($this->matrix) > 0) {
@@ -809,7 +813,14 @@ class Data extends Record
                     $buffer->writeDouble(null === $value ? $sysmis : (float) $value);
                 } elseif (null === $value || $value === $sysmis || '' === $value) {
                     $this->writeOpcode($buffer, self::OPCODE_SYSMISS);
-                } elseif ($value >= 1 - $bias && $value <= 251 - $bias && $value === (int) $value) {
+                } elseif ((\is_int($value) || \is_float($value))
+                    && is_finite((float) $value)
+                    && !(\is_float($value) && 0.0 === $value && fdiv(1.0, $value) < 0)
+                    && is_finite($value + $bias)
+                    && $value + $bias >= 1
+                    && $value + $bias <= 251
+                    && 0.0 === fmod($value + $bias, 1.0)
+                ) {
                     $this->writeOpcode($buffer, (int) ($value + $bias));
                 } else {
                     $this->writeOpcode($buffer, self::OPCODE_RAW_DATA);
@@ -836,7 +847,7 @@ class Data extends Record
                                 $this->writeOpcode($buffer, self::OPCODE_WHITESPACES);
                             } else {
                                 $this->writeOpcode($buffer, self::OPCODE_RAW_DATA);
-                                $this->dataBuffer->writeString($val, 8);
+                                $this->dataBuffer->writeString($val, 8, $charsetTo);
                             }
                         } else {
                             $buffer->writeString($val, 8, $charsetTo);

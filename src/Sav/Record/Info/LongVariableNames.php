@@ -41,7 +41,7 @@ class LongVariableNames extends Info
             $data .= sprintf('%s=%s', $key, $value) . self::DELIMITER;
         }
 
-        $this->dataCount = \strlen($data);
+        $this->dataCount = $buffer->encodedStringLength($data);
         parent::write($buffer);
         $buffer->writeString($data);
     }

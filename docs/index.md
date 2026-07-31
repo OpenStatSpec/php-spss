@@ -163,7 +163,29 @@ $createdAt = new VariableMetadata(
 );
 ```
 
-The library deliberately does not convert these values to `DateTimeInterface` or money objects, so the original SPSS numeric value and format stay lossless.
+The library deliberately does not convert these values to `DateTimeInterface`, formatted strings, or money objects, so the original SPSS numeric value and format stay lossless.
+
+Text-to-number conversion for the three common SPSS date/time formats is available as an explicit opt-in helper:
+
+```php
+use SPSS\Sav\Variable;
+use SPSS\Utils;
+
+$date = Utils::parseSpssDateTime('31-Jul-2026', Variable::FORMAT_TYPE_DATE);
+$duration = Utils::parseSpssDateTime('59:30:15.25', Variable::FORMAT_TYPE_TIME);
+$dateTime = Utils::parseSpssDateTime(
+    '31-Jul-2026 14:05:30.5',
+    Variable::FORMAT_TYPE_DATETIME,
+);
+```
+
+The accepted forms are:
+
+- DATE: `dd-Mmm-yyyy`, using an English three-letter month.
+- TIME: `h+:mm[:ss[.fraction]]`; this is a duration, so hours may exceed 23.
+- DATETIME: `dd-Mmm-yyyy HH:mm[:ss[.fraction]]`, using a 00-23 hour clock.
+
+Parsing is strict and throws `InvalidArgumentException` for unsupported format codes, invalid calendar dates, or malformed and out-of-range times. Pass the returned number as the cell value; `Reader` and `Writer` do not invoke this conversion automatically.
 
 ## Metadata represented by the typed model
 
@@ -181,6 +203,10 @@ Value-label sets may be shared by listing all member variable names in `ValueLab
 - `sourceFormat: 'zsav'` defaults to zlib-compressed ZSAV (mode `2`, record type `$FL3`).
 
 An explicit `compression` value overrides that default: `0` writes uncompressed SAV, `1` writes bytecode-compressed SAV, and `2` writes ZSAV. The writer derives the matching `recordType`; normally leave `recordType` unset. If you set it for low-level interoperability, `$FL2` must use mode `0` or `1`, while `$FL3` must use mode `2`.
+
+SPSS fixed-width string fields are measured in bytes after conversion to `FileTechnicalMetadata::encoding`, not in PHP characters. The writer truncates only at complete target-encoding character boundaries and fills the remaining field with spaces. This also applies to byte-limited variable and value labels, so a multibyte encoding may fit fewer characters than the nominal byte limit.
+
+Provide normal PHP strings in the process's internal encoding; the writer performs the target conversion. Values that must survive exactly should be representable in the selected file encoding.
 
 For ZSAV, use a complete `Dataset`:
 

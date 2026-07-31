@@ -32,7 +32,7 @@ class VeryLongString extends Info
             }
 
             $data = implode(self::DELIMITER, $data);
-            $this->dataCount = \strlen($data);
+            $this->dataCount = $buffer->encodedStringLength($data);
             parent::write($buffer);
             $buffer->writeString($data);
         }

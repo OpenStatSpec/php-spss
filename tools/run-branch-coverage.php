@@ -32,6 +32,7 @@ final class BranchCoverageRunner
             'MalformedContainerTest',
             'SavBinaryLayerTest',
             'SavDateFormatTest',
+            'SavDateTimeValueTest',
             'VeryLongStringWriterTest',
             'WriteMultibyteTest',
         ],

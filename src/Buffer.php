@@ -232,20 +232,73 @@ class Buffer
     }
 
     /**
-     * @param $data
+     * Writes a string converted from the source charset to this buffer's target charset.
+     *
+     * A fixed length is an exact target-byte field width. The encoded string is
+     * truncated without splitting a target-charset character and space-padded.
+     *
+     * @param int|numeric-string|'*' $length  Exact target-byte width, or `*` for unbounded
+     * @param ?string                 $charset Source charset; defaults to the internal encoding
      *
      */
     public function writeString(string|int|float|null $data, int|string $length = '*', ?string $charset = null): int|false
     {
+        if (\is_string($length) && '*' !== $length) {
+            if (!ctype_digit($length)) {
+                throw new \InvalidArgumentException(
+                    'String length must be a non-negative integer or "*".',
+                );
+            }
+
+            $normalizedDigits = ltrim($length, '0');
+            $normalizedDigits = '' === $normalizedDigits ? '0' : $normalizedDigits;
+            $integerLength = (int) $normalizedDigits;
+            if ((string) $integerLength !== $normalizedDigits) {
+                throw new \InvalidArgumentException('String length exceeds the platform integer range.');
+            }
+
+            $length = $integerLength;
+        }
+
+        if (\is_int($length) && $length < 0) {
+            throw new \InvalidArgumentException('String length cannot be negative.');
+        }
+
+        $data = $this->encodeString((string) $data, '*' === $length ? null : $length, $charset);
+
+        return $this->write(pack('A' . $length, $data));
+    }
+
+    /**
+     * Returns the target-encoded byte length, optionally after safe truncation.
+     *
+     * @param ?int    $maxLength Maximum target-encoded bytes
+     * @param ?string $charset   Source charset; defaults to the internal encoding
+     */
+    public function encodedStringLength(string $data, ?int $maxLength = null, ?string $charset = null): int
+    {
+        return \strlen($this->encodeString($data, $maxLength, $charset));
+    }
+
+    /**
+     * Converts to the buffer's target charset and optionally truncates by target bytes.
+     *
+     * @param ?int    $maxLength Maximum target-encoded bytes
+     * @param ?string $charset   Source charset; defaults to the internal encoding
+     */
+    public function encodeString(string $data, ?int $maxLength = null, ?string $charset = null): string
+    {
+        if (null !== $maxLength && $maxLength < 0) {
+            throw new \InvalidArgumentException('Maximum string length cannot be negative.');
+        }
+
         $charsetTo = $this->charset ?? mb_internal_encoding();
         $charsetFrom = $charset ?? mb_internal_encoding();
-        $data = (string) $data;
-        if (strtolower($charsetFrom) !== strtolower($charsetTo)) {
+        if (0 !== strcasecmp($charsetFrom, $charsetTo)) {
             $data = mb_convert_encoding($data, $charsetTo, $charsetFrom);
         }
 
-        //file_put_contents("/var/encuestas/test.txt", "To: " . $charsetTo . " FROM:" . $charsetFrom . "\n", FILE_APPEND | LOCK_EX);
-        return $this->write(pack('A' . $length, $data));
+        return null === $maxLength ? $data : mb_strcut($data, 0, $maxLength, $charsetTo);
     }
 
     public function write(string $data, ?int $length = null): int|false

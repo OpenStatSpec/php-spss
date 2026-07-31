@@ -46,6 +46,40 @@ final class LongStringValueLabelsValidationTest extends TestCase
         );
     }
 
+    public function testSingleByteFileEncodingUsesTargetByteLengthsAtEveryBoundary(): void
+    {
+        $name = "p\xC3\xB5ld";
+        $value = "v\xC3\xA4";
+        $label = str_repeat("\xC3\xA4", 120);
+        $expectedLabels = [['value' => $value, 'label' => $label]];
+        $record = new LongStringValueLabels([
+            'data' => [
+                $name => [
+                    'width' => 9,
+                    'labels' => $expectedLabels,
+                ],
+            ],
+        ]);
+        $buffer = Buffer::factory('', ['memory' => true]);
+        $buffer->charset = 'ISO-8859-1';
+
+        $record->write($buffer);
+        $buffer->rewind();
+        self::assertSame(7, $buffer->readInt());
+        $parsed = new InfoCollection()->fill($buffer)[LongStringValueLabels::SUBTYPE];
+
+        self::assertSame(
+            [
+                $name => [
+                    'width' => 9,
+                    'values' => [$value => $label],
+                    'labels' => $expectedLabels,
+                ],
+            ],
+            $parsed->toArray(),
+        );
+    }
+
     public function testEmptyLabelRecordEmitsNoInfoRecord(): void
     {
         $buffer = Buffer::factory('', ['memory' => true]);

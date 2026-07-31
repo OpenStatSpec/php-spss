@@ -3,9 +3,25 @@
 namespace SPSS;
 
 use SPSS\Sav\Record\Variable;
+use SPSS\Sav\Variable as SavVariable;
 
 class Utils
 {
+    private const array SPSS_MONTHS = [
+        'jan' => 1,
+        'feb' => 2,
+        'mar' => 3,
+        'apr' => 4,
+        'may' => 5,
+        'jun' => 6,
+        'jul' => 7,
+        'aug' => 8,
+        'sep' => 9,
+        'oct' => 10,
+        'nov' => 11,
+        'dec' => 12,
+    ];
+
     /**
      * SPSS represents a date as the number of seconds since the epoch, midnight, Oct. 14, 1582.
      *
@@ -14,6 +30,109 @@ class Utils
     public static function formatDate(int $timestamp, string $format = 'Y M d'): string
     {
         return date($format, strtotime('1582-10-14 00:00:00') + $timestamp);
+    }
+
+    /**
+     * Parses supported human-readable SPSS DATE, TIME, and DATETIME values.
+     *
+     * Supported forms are DATE `dd-Mmm-yyyy`, TIME `h+:mm[:ss[.fraction]]`,
+     * and DATETIME `dd-Mmm-yyyy HH:mm[:ss[.fraction]]`. Month names are the
+     * English three-letter abbreviations (case-insensitive). TIME is an SPSS
+     * duration and may exceed 23 hours; DATETIME uses a 00-23 hour clock.
+     *
+     * @throws \InvalidArgumentException If the format code or value is invalid.
+     */
+    public static function parseSpssDateTime(string $value, int $format): float
+    {
+        return match ($format) {
+            SavVariable::FORMAT_TYPE_DATE => (float) (self::parseSpssDate($value) * 86400),
+            SavVariable::FORMAT_TYPE_TIME => self::parseSpssTime($value, false),
+            SavVariable::FORMAT_TYPE_DATETIME => self::parseSpssDateTimeValue($value),
+            default => throw new \InvalidArgumentException(sprintf(
+                'Unsupported SPSS date/time format code %d.',
+                $format,
+            )),
+        };
+    }
+
+    private static function parseSpssDateTimeValue(string $value): float
+    {
+        if (1 !== preg_match('/^(\d{2}-[A-Za-z]{3}-\d{4}) (.+)$/D', $value, $matches)) {
+            throw new \InvalidArgumentException(sprintf(
+                'Invalid SPSS DATETIME value "%s"; expected dd-Mmm-yyyy HH:mm[:ss[.fraction]].',
+                $value,
+            ));
+        }
+
+        return self::parseSpssDate($matches[1]) * 86400
+            + self::parseSpssTime($matches[2], true);
+    }
+
+    private static function parseSpssDate(string $value): int
+    {
+        if (1 !== preg_match('/^(\d{2})-([A-Za-z]{3})-(\d{4})$/D', $value, $matches)) {
+            throw new \InvalidArgumentException(sprintf(
+                'Invalid SPSS DATE value "%s"; expected dd-Mmm-yyyy.',
+                $value,
+            ));
+        }
+
+        $day = (int) $matches[1];
+        $month = self::SPSS_MONTHS[strtolower($matches[2])] ?? null;
+        $year = (int) $matches[3];
+        if (null === $month || !checkdate($month, $day, $year)) {
+            throw new \InvalidArgumentException(sprintf('Invalid SPSS calendar date "%s".', $value));
+        }
+
+        return self::gregorianDayNumber($year, $month, $day)
+            - self::gregorianDayNumber(1582, 10, 14);
+    }
+
+    private static function parseSpssTime(string $value, bool $timeOfDay): float
+    {
+        if (1 !== preg_match('/^(\d+):(\d{2})(?::(\d{2})(?:\.(\d+))?)?$/D', $value, $matches)) {
+            throw new \InvalidArgumentException(sprintf(
+                'Invalid SPSS %s value "%s"; expected %s.',
+                $timeOfDay ? 'DATETIME time' : 'TIME',
+                $value,
+                $timeOfDay ? 'HH:mm[:ss[.fraction]]' : 'h+:mm[:ss[.fraction]]',
+            ));
+        }
+
+        $hours = (float) $matches[1];
+        $minutes = (int) $matches[2];
+        $seconds = isset($matches[3]) ? (int) $matches[3] : 0;
+        if (!is_finite($hours)
+            || $minutes > 59
+            || $seconds > 59
+            || ($timeOfDay && (2 !== \strlen($matches[1]) || $hours > 23))
+        ) {
+            throw new \InvalidArgumentException(sprintf('Invalid SPSS time value "%s".', $value));
+        }
+
+        $fraction = isset($matches[4]) ? (float) ('0.' . $matches[4]) : 0.0;
+        $result = $hours * 3600 + $minutes * 60 + $seconds + $fraction;
+        if (!is_finite($result)) {
+            throw new \InvalidArgumentException(sprintf('SPSS time value "%s" is out of range.', $value));
+        }
+
+        return $result;
+    }
+
+    /** Gregorian day number calculated without Unix timestamps or a default timezone. */
+    private static function gregorianDayNumber(int $year, int $month, int $day): int
+    {
+        $a = intdiv(14 - $month, 12);
+        $adjustedYear = $year + 4800 - $a;
+        $adjustedMonth = $month + 12 * $a - 3;
+
+        return $day
+            + intdiv(153 * $adjustedMonth + 2, 5)
+            + 365 * $adjustedYear
+            + intdiv($adjustedYear, 4)
+            - intdiv($adjustedYear, 100)
+            + intdiv($adjustedYear, 400)
+            - 32045;
     }
 
     /**

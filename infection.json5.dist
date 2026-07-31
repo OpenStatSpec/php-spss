@@ -11,7 +11,19 @@
   },
   "initialTestsPhpOptions": "-d xdebug.mode=coverage",
   "mutators": {
-    "@default": true
+    "@default": true,
+    "IncrementInteger": {
+      // `round` 0 takes the direct length; round 1 produces the same length for every integer.
+      "ignoreSourceCodeByRegex": [
+        "public function readString\\(int \\$length, int \\$round = 0, \\?string \\$charset = null\\): string\\|false"
+      ]
+    },
+    "FalseValue": {
+      // Constant-valid `unpack('C*', string)` cannot return false; both false branches are unreachable.
+      "ignoreSourceCodeByRegex": [
+        "return false === \\$unpacked \\? false : array_values\\(\\$unpacked\\);"
+      ]
+    }
   },
   "minCoveredMsi": 80,
   "timeoutsAsEscaped": true,

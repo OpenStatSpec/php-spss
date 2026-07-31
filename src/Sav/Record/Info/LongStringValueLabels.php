@@ -112,7 +112,7 @@ class LongStringValueLabels extends Info
             }
 
             $varName = (string) $varName;
-            $varNameLength = $this->encodedLength($buffer, $varName);
+            $varNameLength = $buffer->encodedStringLength($varName);
             $localBuffer->writeInt($varNameLength);
             $localBuffer->writeString($varName, $varNameLength);
             $localBuffer->writeInt($width);
@@ -127,11 +127,11 @@ class LongStringValueLabels extends Info
                 if (!\is_string($value) || !\is_string($label)) {
                     throw new \InvalidArgumentException('Long string value label values and labels must be strings.');
                 }
-                if ($this->encodedLength($buffer, $value) > $width) {
+                if ($buffer->encodedStringLength($value) > $width) {
                     throw new \InvalidArgumentException('value exceeds the variable width');
                 }
 
-                $labelLength = $this->encodedLength($buffer, $label);
+                $labelLength = $buffer->encodedStringLength($label);
                 if ($labelLength > 120) {
                     throw new \InvalidArgumentException('label must not exceed 120 bytes');
                 }
@@ -150,16 +150,5 @@ class LongStringValueLabels extends Info
             $localBuffer->rewind();
             $buffer->writeStream($localBuffer->getStream());
         }
-    }
-
-    private function encodedLength(Buffer $buffer, string $value): int
-    {
-        $charsetTo = $buffer->charset ?? mb_internal_encoding();
-        $charsetFrom = mb_internal_encoding();
-        if (strtolower($charsetFrom) !== strtolower($charsetTo)) {
-            $value = mb_convert_encoding($value, $charsetTo, $charsetFrom);
-        }
-
-        return \strlen($value);
     }
 }

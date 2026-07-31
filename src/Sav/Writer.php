@@ -121,23 +121,39 @@ class Writer
         $this->info[Record\Info\LongStringMissingValues::SUBTYPE] = new Record\Info\LongStringMissingValues();
 
         $encode = (isset($data['info']) && isset($data['info']['characterEncoding'])) ? $data['info']['characterEncoding'] : 'UTF-8';
-        $this->info[Record\Info\CharacterEncoding::SUBTYPE]       = new Record\Info\CharacterEncoding($encode);
-        $this->buffer->charset = $encode;
 
         // FIXME: This means we can not set any other encode here?
         // https://www.gnu.org/software/pspp/pspp-dev/html_node/Machine-Integer-Info-Record.html#character_002dcode
         $charactersCode = [
-            "utf-8" => 65001,
-            "iso 8859-1" => 28591,
-            "windows-1252" => 1252,
-            "windows-1250" => 1250,
-            "dec kanji" => 4,
-            "8-bit ascii" => 3,
-            "7-bit ascii" => 2,
+            "utf8" => 65001,
+            "iso88591" => 28591,
+            "latin1" => 28591,
+            "windows1252" => 1252,
+            "cp1252" => 1252,
+            "windows1250" => 1250,
+            "cp1250" => 1250,
+            "deckanji" => 4,
+            "8bitascii" => 3,
+            "7bitascii" => 2,
             "ebcdic" => 1,
         ];
 
-        $chCode = $charactersCode[strtolower($encode)] ?? 65001;
+        $encodingKey = preg_replace('/[^a-z0-9]+/', '', strtolower(trim($encode))) ?? '';
+
+        $canonicalEncodings = [
+            'utf8' => 'UTF-8',
+            'iso88591' => 'ISO-8859-1',
+            'latin1' => 'ISO-8859-1',
+            'windows1252' => 'Windows-1252',
+            'cp1252' => 'Windows-1252',
+            'windows1250' => 'Windows-1250',
+            'cp1250' => 'Windows-1250',
+        ];
+        $encode = $canonicalEncodings[$encodingKey] ?? $encode;
+        $this->info[Record\Info\CharacterEncoding::SUBTYPE] = new Record\Info\CharacterEncoding($encode);
+        $this->buffer->charset = $encode;
+
+        $chCode = $charactersCode[$encodingKey] ?? 65001;
         $this->info[Record\Info\MachineInteger::SUBTYPE]->characterCode = $chCode;
         $this->data = new Record\Data();
         $nominalIdx = 0;
@@ -171,9 +187,14 @@ class Writer
 
             // TODO: refactory - keep 7 positions so we can add after that for 100 very long string segments
             $prefix = mb_strtoupper(mb_substr((string) $var->name, 0, min(mb_strlen((string) $var->name), 5)));
-            $variable->name  = ($isString && (Record\Variable::isVeryLong($var->width)) && (!in_array($prefix, $shortVarsPrefix, true))) ?
-                               $prefix : 'V' . str_pad((string) ($idx + 1), 5, '0', STR_PAD_LEFT);
-            $shortVarsPrefix[] = $prefix;
+            $physicalPrefix = $this->buffer->encodeString($prefix, 5);
+            if (0 !== strcasecmp($encode, mb_internal_encoding())) {
+                $physicalPrefix = mb_convert_encoding($physicalPrefix, mb_internal_encoding(), $encode);
+            }
+            $variable->name = ($isString && Record\Variable::isVeryLong($var->width)
+                && !in_array($physicalPrefix, $shortVarsPrefix, true))
+                ? $physicalPrefix : 'V' . str_pad((string) ($idx + 1), 5, '0', STR_PAD_LEFT);
+            $shortVarsPrefix[] = $physicalPrefix;
             $variable->width = $isString ? $var->width : 0;
 
             $variable->label = $var->label;

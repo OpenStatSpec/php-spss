@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.0.1 (2026-07-31)
+
+- Made fixed-width strings byte-safe in the target file encoding, with complete-character truncation, correct declared lengths, and space padding for variable and value labels.
+- Corrected bytecode compression for integer-valued floats, signed zero, fractional compression biases, and non-UTF-8 string payloads in SAV and ZSAV files.
+- Added the explicit, strict `Utils::parseSpssDateTime()` helper for supported SPSS DATE, TIME, and DATETIME text forms; numeric cells are never converted implicitly.
+- Added focused regression and mutation coverage for buffer boundaries, target encodings, long-string metadata, compressed opcodes, and date/time validation.
+
 ## 3.0.0 (2026-07-26)
 
 - Raised the minimum PHP version to 8.4.1.
