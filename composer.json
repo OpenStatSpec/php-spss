@@ -20,7 +20,6 @@
   "authors": [
     {
       "name": "Korniienko Vladyslav",
-      "email": "vk.tiamo@gmail.com",
       "role": "Original author"
     },
     {
@@ -48,9 +47,6 @@
     "phpstan/phpstan-strict-rules": "^2.0",
     "phpunit/phpunit": "^13.2",
     "rector/rector": "^2.5"
-  },
-  "replace": {
-    "tiamo/spss": "self.version"
   },
   "autoload": {
     "psr-4": {

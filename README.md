@@ -7,7 +7,7 @@
 
 A PHP library for reading and writing SPSS / PSPP SAV and ZSAV data files.
 
-Maintained by [OpenStatSpec](https://github.com/OpenStatSpec). This project continues the MIT-licensed [`tiamo/spss`](https://github.com/tiamo/spss) codebase created by Vladyslav Korniienko. The stable PHP namespace remains `SPSS\` for compatibility.
+Maintained by [OpenStatSpec](https://github.com/OpenStatSpec). This project continues the MIT-licensed codebase created by Vladyslav Korniienko. The stable PHP namespace remains `SPSS\` for compatibility.
 
 ## Requirements
 
