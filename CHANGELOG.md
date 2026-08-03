@@ -1,10 +1,14 @@
 # Changelog
 
+## 3.0.3 (2026-08-03)
+
+- Removed legacy package replacement metadata and remaining legacy project references from the active distribution.
+
 ## 3.0.2 (2026-07-31)
 
 - Moved active maintenance to the independent `OpenStatSpec/php-spss` repository.
-- Renamed the Composer package from `tiamo/spss` to `openstatspec/spss-sav`, while keeping the stable `SPSS\` PHP namespace.
-- Preserved the original author attribution and added Composer replacement metadata for migration compatibility.
+- Published the codec as `openstatspec/spss-sav`, while keeping the stable `SPSS\` PHP namespace.
+- Preserved the original author attribution during the repository migration.
 
 ## 3.0.1 (2026-07-31)
 
@@ -33,13 +37,13 @@
 
 2021-01
 
-* Compatibility: is_countable (PHP 7 >= 7.3.0, PHP 8) ([#58](https://github.com/tiamo/spss/pull/58))
+* Compatibility: is_countable (PHP 7 >= 7.3.0, PHP 8) (upstream PR #58)
 
 ## 2.2.1
 
 2020-12
 
-* Fix date writer ([#55](https://github.com/tiamo/spss/pull/55))
+* Fix date writer (upstream PR #55)
 
 ## 2.2.0
 

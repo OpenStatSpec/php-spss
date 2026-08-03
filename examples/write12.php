@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * ISSUE: https://github.com/tiamo/spss/issues/12.
+ * Historical upstream issue #12.
  */
 require __DIR__ . '/../vendor/autoload.php';
 
