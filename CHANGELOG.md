@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.0.4 (2026-09-07)
+
+- Updated development tooling: PHPUnit 13.3.1, PHP-CS-Fixer 3.95.22, Infection 0.35.2, Rector 2.6.3, and PHPStan 2.2.9.
+- Removed a deprecated PHPUnit option from the branch-coverage runner so the release gate remains compatible with PHPUnit 13.3 and the lowest supported dependencies.
+- No runtime API or SAV/ZSAV format changes.
+
 ## 3.0.3 (2026-08-03)
 
 - Removed legacy package replacement metadata and remaining legacy project references from the active distribution.

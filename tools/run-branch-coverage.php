@@ -154,7 +154,6 @@ final class BranchCoverageRunner
         $command = [
             PHP_BINARY,
             $this->rootDirectory . '/vendor/bin/phpunit',
-            '--do-not-cache-result',
             '--path-coverage',
             '--coverage-php',
             $artifact,
