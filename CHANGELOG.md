@@ -3,7 +3,7 @@
 ## 3.2.0 (2026-11-09)
 
 - Restored PHP 8.3 support. The minimum had been raised to 8.4.1 with the v3 tooling update, but the library only used three PHP 8.4 constructs (`new` without parentheses in two places and `array_all()`); these are replaced with PHP 8.3 equivalents without behaviour changes.
-- PHPUnit 12.5 is accepted for PHP 8.3; CI adds a PHP 8.3 lowest-dependency job that runs syntax checks and the full test suite. Static analysis and coverage/mutation gates continue on PHP 8.4+.
+- CI adds a PHP 8.3 lowest-dependency job that runs syntax checks and the full test suite with PHPUnit 12.5. Development tooling, static analysis and coverage/mutation gates stay on PHP 8.4+ with PHPUnit 13.
 - No runtime API or SAV/ZSAV format changes.
 
 ## 3.1.2 (2026-11-09)

@@ -65,6 +65,7 @@ jobs:
       - name: Install lowest supported dependencies for PHP 8.3
         run: |
           composer config platform.php 8.3.0
+          composer require --dev --no-update "phpunit/phpunit:^12.5"
           composer update --no-interaction --prefer-dist --prefer-lowest
 
       - name: Run syntax and unit tests
