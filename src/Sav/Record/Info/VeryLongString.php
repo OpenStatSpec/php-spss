@@ -26,12 +26,12 @@ class VeryLongString extends Info
     public function write(Buffer $buffer): void
     {
         if ([] !== $this->data) {
-            $data = [];
+            // SPSS only recognises entries terminated by NUL + tab, including the last one.
+            $data = '';
             foreach ($this->data as $key => $value) {
-                $data[] = sprintf('%s=%05d%c', $key, $value, 0);
+                $data .= sprintf('%s=%05d%c', $key, $value, 0) . self::DELIMITER;
             }
 
-            $data = implode(self::DELIMITER, $data);
             $this->dataCount = $buffer->encodedStringLength($data);
             parent::write($buffer);
             $buffer->writeString($data);

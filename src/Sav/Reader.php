@@ -270,9 +270,7 @@ class Reader
 
     public function readCase(): bool
     {
-        if ($this->record === null) {
-            $this->record = Record\Data::create();
-        }
+        $this->record ??= Record\Data::create();
 
         $this->lastCase++;
 
