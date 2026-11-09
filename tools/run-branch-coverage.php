@@ -71,7 +71,7 @@ final class BranchCoverageRunner
                 $this->runShard($shard, $tests);
             }
 
-            $merged = new Merger()->merge($this->shardArtifacts, false);
+            $merged = (new Merger())->merge($this->shardArtifacts, false);
             $report = ReportFacade::fromSerializedData($merged);
             $report->renderCobertura($this->reportPath);
             $summary = $report->summary();
@@ -222,4 +222,4 @@ final class BranchCoverageRunner
     }
 }
 
-exit(new BranchCoverageRunner()->run());
+exit((new BranchCoverageRunner())->run());

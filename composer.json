@@ -33,7 +33,7 @@
     "source": "https://github.com/OpenStatSpec/php-spss"
   },
   "require": {
-    "php": "^8.4.1",
+    "php": "^8.3",
     "ext-bcmath": "*",
     "ext-mbstring": "*",
     "ext-zlib": "*"

@@ -32,7 +32,7 @@ final class LongStringValueLabelsValidationTest extends TestCase
         $record->write($buffer);
         $buffer->rewind();
         self::assertSame(7, $buffer->readInt());
-        $parsed = new InfoCollection()->fill($buffer)[LongStringValueLabels::SUBTYPE];
+        $parsed = (new InfoCollection())->fill($buffer)[LongStringValueLabels::SUBTYPE];
 
         self::assertSame(
             [
@@ -66,7 +66,7 @@ final class LongStringValueLabelsValidationTest extends TestCase
         $record->write($buffer);
         $buffer->rewind();
         self::assertSame(7, $buffer->readInt());
-        $parsed = new InfoCollection()->fill($buffer)[LongStringValueLabels::SUBTYPE];
+        $parsed = (new InfoCollection())->fill($buffer)[LongStringValueLabels::SUBTYPE];
 
         self::assertSame(
             [
@@ -83,7 +83,7 @@ final class LongStringValueLabelsValidationTest extends TestCase
     public function testEmptyLabelRecordEmitsNoInfoRecord(): void
     {
         $buffer = Buffer::factory('', ['memory' => true]);
-        new LongStringValueLabels()->write($buffer);
+        (new LongStringValueLabels())->write($buffer);
 
         self::assertSame(0, $buffer->position());
         self::assertSame('', $buffer->read());
@@ -159,6 +159,6 @@ final class LongStringValueLabelsValidationTest extends TestCase
     {
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage($message);
-        new LongStringValueLabels(['data' => $data])->write(Buffer::factory('', ['memory' => true]));
+        (new LongStringValueLabels(['data' => $data]))->write(Buffer::factory('', ['memory' => true]));
     }
 }

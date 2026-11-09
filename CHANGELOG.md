@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.2.0 (2026-11-09)
+
+- Restored PHP 8.3 support. The minimum had been raised to 8.4.1 with the v3 tooling update, but the library only used three PHP 8.4 constructs (`new` without parentheses in two places and `array_all()`); these are replaced with PHP 8.3 equivalents without behaviour changes.
+- CI adds a PHP 8.3 lowest-dependency job that runs syntax checks and the full test suite with PHPUnit 12.5. Development tooling, static analysis and coverage/mutation gates stay on PHP 8.4+ with PHPUnit 13.
+- No runtime API or SAV/ZSAV format changes.
+
 ## 3.1.2 (2026-11-09)
 
 - Fixed the very long string record (type 7, subtype 14): every `NAME=WIDTH` entry, including the last one, now ends with NUL + tab as SPSS and PSPP write it. IBM SPSS Statistics previously ignored the record and showed each 252-byte segment of a string wider than 255 bytes as a separate variable (`NAME_A`, `NAME_B`, ...).

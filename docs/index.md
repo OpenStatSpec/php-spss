@@ -4,7 +4,7 @@ PHP-SPSS v3 provides a typed, row-oriented model for reading, inspecting, creati
 
 ## Requirements and file support
 
-- PHP 8.4.1 or newer
+- PHP 8.3 or newer
 - `mbstring`, `bcmath`, and `zlib` extensions
 - unencrypted SAV (`$FL2`) and ZSAV (`$FL3`) files
 

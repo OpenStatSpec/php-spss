@@ -143,7 +143,7 @@ final class RecordCountValidationTest extends TestCase
 
         $this->expectException(Exception::class);
         $this->expectExceptionMessage($message);
-        new InfoCollection()->fill($buffer);
+        (new InfoCollection())->fill($buffer);
     }
 
     /** @return iterable<string, array{int, int, string}> */
@@ -165,6 +165,6 @@ final class RecordCountValidationTest extends TestCase
 
         $this->expectException(Exception::class);
         $this->expectExceptionMessage('truncated size or count');
-        new InfoCollection()->fill($buffer);
+        (new InfoCollection())->fill($buffer);
     }
 }

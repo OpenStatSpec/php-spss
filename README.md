@@ -11,7 +11,7 @@ Maintained by [OpenStatSpec](https://github.com/OpenStatSpec). This project cont
 
 ## Requirements
 
-- PHP 8.4.1 or newer
+- PHP 8.3 or newer
 - mbstring extension
 - bcmath extension
 - zlib extension

@@ -171,7 +171,7 @@ class Reader
             throw new \LogicException('Reader data must be loaded before including rows in a dataset.');
         }
 
-        return new DatasetAssembler()->assemble($this, $includeData);
+        return (new DatasetAssembler())->assemble($this, $includeData);
     }
 
     public function readHeader(): static
