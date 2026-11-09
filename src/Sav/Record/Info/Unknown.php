@@ -17,9 +17,7 @@ class Unknown extends Info
     #[\Override]
     public function write(Buffer $buffer): void
     {
-        if (!isset($this->data['raw'])) {
-            $this->data['raw'] = '';
-        }
+        $this->data['raw'] ??= '';
 
         $this->dataCount = \strlen((string) $this->data['raw']);
         parent::write($buffer);

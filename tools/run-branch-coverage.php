@@ -6,7 +6,7 @@ declare(strict_types=1);
 use SebastianBergmann\CodeCoverage\Report\Facade as ReportFacade;
 use SebastianBergmann\CodeCoverage\Serialization\Merger;
 
-require dirname(__DIR__) . '/vendor/autoload.php';
+require __DIR__ . '/../vendor/autoload.php';
 
 final class BranchCoverageRunner
 {
