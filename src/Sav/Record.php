@@ -22,7 +22,7 @@ abstract class Record implements RecordInterface
                 throw new \InvalidArgumentException(sprintf('Unknown %s property "%s".', static::class, $key));
             }
 
-            new \ReflectionProperty($this, $property)->setValue($this, $value);
+            (new \ReflectionProperty($this, $property))->setValue($this, $value);
         }
     }
 

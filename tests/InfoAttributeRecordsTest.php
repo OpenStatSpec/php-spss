@@ -81,7 +81,7 @@ class InfoAttributeRecordsTest extends TestCase
 
         $buffer->rewind();
         self::assertSame(7, $buffer->readInt());
-        $parsed = new InfoCollection()->fill($buffer)[DataFileAttributes::SUBTYPE];
+        $parsed = (new InfoCollection())->fill($buffer)[DataFileAttributes::SUBTYPE];
         self::assertSame($expected, $parsed->toArray());
     }
 
@@ -112,8 +112,8 @@ class InfoAttributeRecordsTest extends TestCase
         ];
 
         $buffer = Buffer::factory('', ['memory' => true]);
-        new VariableAttributes(['data' => $firstData])->write($buffer);
-        new VariableAttributes(['data' => $secondData])->write($buffer);
+        (new VariableAttributes(['data' => $firstData]))->write($buffer);
+        (new VariableAttributes(['data' => $secondData]))->write($buffer);
         $buffer->rewind();
 
         $collection = new InfoCollection();
@@ -149,7 +149,7 @@ class InfoAttributeRecordsTest extends TestCase
 
         $this->expectException(1 === $size ? \UnexpectedValueException::class : Exception::class);
         $this->expectExceptionMessage($message);
-        new InfoCollection()->fill($buffer);
+        (new InfoCollection())->fill($buffer);
     }
 
     /** @return iterable<string, array{int, int, string, string}> */
@@ -194,7 +194,7 @@ class InfoAttributeRecordsTest extends TestCase
         $record->write($buffer);
         $buffer->rewind();
         self::assertSame(7, $buffer->readInt());
-        $parsed = new InfoCollection()->fill($buffer)[$record::SUBTYPE];
+        $parsed = (new InfoCollection())->fill($buffer)[$record::SUBTYPE];
         if (!$parsed instanceof DataFileAttributes && !$parsed instanceof VariableAttributes) {
             throw new \LogicException(sprintf('Unexpected record type %s.', $parsed::class));
         }

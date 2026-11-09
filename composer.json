@@ -33,7 +33,7 @@
     "source": "https://github.com/OpenStatSpec/php-spss"
   },
   "require": {
-    "php": "^8.4.1",
+    "php": "^8.3",
     "ext-bcmath": "*",
     "ext-mbstring": "*",
     "ext-zlib": "*"
@@ -45,7 +45,7 @@
     "phpstan/phpstan": "^2.2",
     "phpstan/phpstan-phpunit": "^2.0",
     "phpstan/phpstan-strict-rules": "^2.0",
-    "phpunit/phpunit": "^13.2",
+    "phpunit/phpunit": "^12.5 || ^13.2",
     "rector/rector": "^2.5"
   },
   "autoload": {

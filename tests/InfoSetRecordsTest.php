@@ -163,7 +163,7 @@ class InfoSetRecordsTest extends TestCase
         $this->expectException(1 === $size ? \UnexpectedValueException::class : Exception::class);
         $this->expectExceptionMessage($message);
 
-        new InfoCollection()->fill($buffer);
+        (new InfoCollection())->fill($buffer);
     }
 
     /** @return iterable<string, array{int, int, string, string}> */
@@ -205,7 +205,7 @@ class InfoSetRecordsTest extends TestCase
     {
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage($message);
-        new VariableSets(['data' => $data])->write(Buffer::factory('', ['memory' => true]));
+        (new VariableSets(['data' => $data]))->write(Buffer::factory('', ['memory' => true]));
     }
 
     /** @return iterable<string, array{int, array<string, array<string, mixed>>, string}> */
@@ -253,7 +253,7 @@ class InfoSetRecordsTest extends TestCase
     ): void {
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage($message);
-        new MultipleResponseSets(['subtype' => $subtype, 'data' => $data])
+        (new MultipleResponseSets(['subtype' => $subtype, 'data' => $data]))
             ->write(Buffer::factory('', ['memory' => true]));
     }
 
@@ -264,7 +264,7 @@ class InfoSetRecordsTest extends TestCase
         $buffer->rewind();
         self::assertSame(7, $buffer->readInt());
 
-        $parsed = new InfoCollection()->fill($buffer);
+        $parsed = (new InfoCollection())->fill($buffer);
 
         $subtype = $record instanceof MultipleResponseSets ? $record->subtype : VariableSets::SUBTYPE;
         $parsedRecord = $parsed[$subtype];
@@ -284,7 +284,7 @@ class InfoSetRecordsTest extends TestCase
         $buffer->write($payload);
         $buffer->rewind();
 
-        $record = new InfoCollection()->fill($buffer)[$subtype];
+        $record = (new InfoCollection())->fill($buffer)[$subtype];
         if (!$record instanceof VariableSets && !$record instanceof MultipleResponseSets) {
             throw new \LogicException(sprintf('Unexpected record type %s.', $record::class));
         }

@@ -45,6 +45,33 @@ jobs:
         if: matrix.dependencies == 'lowest'
         run: composer qa:lowest
 
+  # PHP 8.3 is a supported runtime; static analysis and tooling gates run on 8.4+ where PHPUnit 13 is available.
+  php83-runtime:
+    name: PHP 8.3 / lowest dependencies runtime
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: bcmath, mbstring, zlib
+          coverage: none
+          tools: composer:v2
+
+      - name: Install lowest supported dependencies for PHP 8.3
+        run: |
+          composer config platform.php 8.3.0
+          composer update --no-interaction --prefer-dist --prefer-lowest
+
+      - name: Run syntax and unit tests
+        run: |
+          composer test:syntax
+          composer test:unit
+
   quality-gates:
     name: Coverage and mutation gates
     runs-on: ubuntu-latest

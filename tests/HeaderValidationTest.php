@@ -51,11 +51,11 @@ final class HeaderValidationTest extends TestCase
     public function testValidCompressionHeaderPairsCanBeWritten(): void
     {
         $savBuffer = Buffer::factory();
-        new Header(['recType' => Header::NORMAL_REC_TYPE, 'compression' => 1])->write($savBuffer);
+        (new Header(['recType' => Header::NORMAL_REC_TYPE, 'compression' => 1]))->write($savBuffer);
         $this->assertSame(176, $savBuffer->position());
 
         $zsavBuffer = Buffer::factory();
-        new Header(['recType' => Header::ZLIB_REC_TYPE, 'compression' => 2])->write($zsavBuffer);
+        (new Header(['recType' => Header::ZLIB_REC_TYPE, 'compression' => 2]))->write($zsavBuffer);
         $this->assertSame(176, $zsavBuffer->position());
     }
 }

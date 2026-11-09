@@ -102,7 +102,7 @@ final class MalformedContainerTest extends TestCase
     private function container(string $body): string
     {
         $buffer = Buffer::factory('', ['memory' => true]);
-        new Header()->write($buffer);
+        (new Header())->write($buffer);
         $buffer->write($body);
         $buffer->rewind();
 

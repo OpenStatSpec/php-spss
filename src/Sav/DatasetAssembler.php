@@ -564,7 +564,13 @@ final class DatasetAssembler
         if ([] === $variableNames) {
             return false;
         }
-        return array_all($variableNames, fn(string $variableName): bool => VariableType::NUMERIC === $dictionary->variable($variableName)?->type);
+        foreach ($variableNames as $variableName) {
+            if (VariableType::NUMERIC !== $dictionary->variable($variableName)?->type) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /** @return array<string, string> */
