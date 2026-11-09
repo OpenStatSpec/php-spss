@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.1.2 (2026-11-09)
+
+- Fixed the very long string record (type 7, subtype 14): every `NAME=WIDTH` entry, including the last one, now ends with NUL + tab as SPSS and PSPP write it. IBM SPSS Statistics previously ignored the record and showed each 252-byte segment of a string wider than 255 bytes as a separate variable (`NAME_A`, `NAME_B`, ...).
+- Updated development tooling: PHPUnit 13.4.6, PHP-CS-Fixer 3.95.29, Infection 0.35.10, Rector 2.8.4 and PHPStan 2.3.5, and resolved the `symfony/filesystem` advisory in the development lock file.
+- No runtime API changes.
+
 ## 3.0.4 (2026-09-07)
 
 - Updated development tooling: PHPUnit 13.3.1, PHP-CS-Fixer 3.95.22, Infection 0.35.2, Rector 2.6.3, and PHPStan 2.2.9.

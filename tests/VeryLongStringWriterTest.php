@@ -61,6 +61,14 @@ final class VeryLongStringWriterTest extends TestCase
         $buffer = $writer->getBuffer();
         $buffer->rewind();
 
+        $raw = stream_get_contents($buffer->getStream());
+        // Record 7/14 body must end every entry, including the last, with NUL + tab (as SPSS and PSPP write it).
+        self::assertStringContainsString(
+            pack('V4', 7, VeryLongString::SUBTYPE, 1, 12) . "\xC3\x95\xC3\x84=00700\x00\t",
+            $raw,
+        );
+        $buffer->rewind();
+
         $reader = Reader::fromString($buffer->getStream())->read();
 
         self::assertSame(["\xC3\x95\xC3\x84" => 700], $reader->info[VeryLongString::SUBTYPE]->toArray());
